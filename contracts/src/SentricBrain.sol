@@ -375,17 +375,21 @@ contract SentricBrain is SomniaEventHandler, IAgentRequesterHandler {
         bytes memory decisionBytes = bytes(decision);
 
         // ---- Stage 3: LLM confidence (0-100) ----------------------------------
+        // The model is stateless across requests — it MUST see its own decision
+        // in the prompt or it cannot score confidence meaningfully.
         bytes memory payload = abi.encodeCall(
             IAgentMethods.inferNumber,
             (
                 string.concat(
-                    "Given: BTC price $",
+                    "You decided: ",
+                    decision,
+                    ". Given: BTC price $",
                     _toDecimal(_lastPrice, jsonDecimals, 2),
                     ", 24h change ",
                     _formatSignedBps(_lastChangeBps),
                     "%, intraday range ",
                     _formatSignedBps(_lastVolBps),
-                    "%. How confident (0-100) are you in the previous action decision? Return only the number."
+                    "%. How confident (0-100) are you in this decision? Return only the number."
                 ),
                 "You are a deterministic risk scorer. Output only an integer between 0 and 100.",
                 0,
