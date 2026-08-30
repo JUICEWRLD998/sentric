@@ -1,0 +1,143 @@
+/* /styleguide — layout + demo scaffolding only. Tokens from tokens.css. */
+
+.wrap {
+  position: relative;
+  z-index: var(--z-raised);
+  max-width: 72rem;
+  margin-inline: auto;
+  padding: var(--space-8) var(--space-6);
+}
+
+.back {
+  display: inline-block;
+  margin-bottom: var(--space-5);
+  font-family: var(--font-mono);
+  font-size: var(--fs-step--1);
+  color: var(--text-muted);
+}
+
+.h1 {
+  font-size: var(--fs-step-5);
+  margin-bottom: var(--space-2);
+}
+
+.lede {
+  color: var(--text-secondary);
+  max-width: 60ch;
+  margin-bottom: var(--space-8);
+}
+
+.section {
+  margin-bottom: var(--space-8);
+}
+
+.h2 {
+  font-size: var(--fs-step-2);
+  color: var(--text-primary);
+  margin-bottom: var(--space-3);
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr));
+  gap: var(--space-4);
+}
+
+.swatch {
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-subtle);
+  overflow: hidden;
+}
+
+.swatchChip {
+  height: 4rem;
+}
+
+.swatchMeta {
+  padding: var(--space-3);
+  background: var(--surface-1);
+}
+
+.swatchName {
+  font-family: var(--font-mono);
+  font-size: var(--fs-step--1);
+  color: var(--text-secondary);
+}
+
+.swatchValue {
+  font-family: var(--font-mono);
+  font-size: var(--fs-step--1);
+  color: var(--text-faint);
+  word-break: break-all;
+}
+
+.typeRow {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-4);
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.typeLabel {
+  font-family: var(--font-mono);
+  font-size: var(--fs-step--1);
+  color: var(--text-faint);
+  width: 9rem;
+  flex-shrink: 0;
+}
+
+.typeLabel em {
+  font-style: normal;
+  color: var(--text-muted);
+}
+
+.typeSample {
+  font-family: var(--font-display);
+  line-height: var(--lh-tight);
+  color: var(--text-primary);
+}
+
+.demoGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+  gap: var(--space-5);
+}
+
+.demoBox {
+  position: relative;
+  height: 10rem;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background: var(--surface-1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+  color: var(--text-secondary);
+}
+
+.demoLabel {
+  margin-top: var(--space-2);
+  font-family: var(--font-mono);
+  font-size: var(--fs-step--1);
+  color: var(--text-muted);
+}
+
+.tokenList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.tokenChip {
+  font-family: var(--font-mono);
+  font-size: var(--fs-step--1);
+  background: var(--code-bg);
+  color: var(--code-fg);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--code-radius);
+  padding: var(--space-1) var(--space-2);
+}

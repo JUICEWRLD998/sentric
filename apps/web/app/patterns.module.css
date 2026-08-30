@@ -1,0 +1,48 @@
+/* ============================================================
+   Noviq UI — patterns.module.css  (reusable surface patterns)
+   Copy verbatim from the Noviq UI Playbook §4, EXCEPT the mesh:
+   it is STATIC here — radial gradients kept, drift @keyframes
+   (meshDriftA/B) and the `animation` property removed.
+   ============================================================ */
+
+/* 4.1 Glass card */
+.glassCard {
+  position: relative; background: var(--glass-bg);
+  border: 1px solid var(--glass-border); border-radius: var(--card-radius);
+  box-shadow: var(--shadow-2); overflow: clip;
+  backdrop-filter: blur(var(--blur-md)) saturate(1.25);
+  -webkit-backdrop-filter: blur(var(--blur-md)) saturate(1.25);
+}
+/* Fallback where backdrop-filter is unsupported */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .glassCard { background: var(--surface-2); }
+}
+
+/* 4.2 Edge-light ring (1px gradient border via mask) */
+.edgeLight { position: relative; }
+.edgeLight::before {
+  content:""; position:absolute; inset:0; border-radius:inherit; padding:1px; pointer-events:none;
+  background: linear-gradient(140deg, var(--glass-highlight) 0%, transparent 38%,
+              transparent 62%, oklch(0.72 0.08 285 / 0.22) 100%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor; mask-composite: exclude;
+}
+
+/* 4.3 Film grain (SVG noise, low opacity) */
+.filmGrain::after {
+  content:""; position:absolute; inset:0; z-index:var(--z-raised); pointer-events:none;
+  opacity:0.035; mix-blend-mode:overlay; background-size:140px 140px;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* 4.4 STATIC mesh gradient (two blurred blobs — no drift animation) */
+.mesh { position:absolute; inset:0; z-index:var(--z-base); overflow:hidden;
+        background-color:var(--surface-0); pointer-events:none; }
+.mesh::before,.mesh::after { content:""; position:absolute; inset:-30%;
+        will-change:transform; filter:blur(var(--blur-lg)); background-repeat:no-repeat; }
+.mesh::before { background-image:
+    radial-gradient(38% 42% at 22% 28%, oklch(0.62 0.19 285 / 0.40), transparent 70%),
+    radial-gradient(34% 38% at 78% 20%, oklch(0.55 0.19 285 / 0.28), transparent 70%); }
+.mesh::after  { background-image:
+    radial-gradient(40% 44% at 68% 78%, oklch(0.50 0.14 300 / 0.30), transparent 70%),
+    radial-gradient(30% 34% at 30% 82%, oklch(0.62 0.16 250 / 0.24), transparent 70%); }

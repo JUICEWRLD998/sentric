@@ -1,0 +1,42 @@
+/* Home page — layout only. Tokens live in tokens.css; patterns in patterns.module.css. */
+
+.main {
+  position: relative;
+  z-index: var(--z-raised);
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-6);
+}
+
+.hero {
+  max-width: 40rem;
+  padding: var(--space-7) var(--space-8);
+  text-align: center;
+}
+
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: var(--fs-step--1);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: var(--space-4);
+}
+
+.title {
+  font-family: var(--font-display);
+  font-size: var(--fs-step-6);
+  line-height: var(--lh-tight);
+  letter-spacing: var(--tracking-tight);
+  margin-bottom: var(--space-4);
+}
+
+.tagline {
+  font-size: var(--fs-step-1);
+  color: var(--text-secondary);
+  line-height: var(--lh-snug);
+  max-width: 32ch;
+  margin-inline: auto;
+}

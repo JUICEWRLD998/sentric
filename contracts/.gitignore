@@ -1,0 +1,7 @@
+# Foundry build artifacts
+out/
+cache/
+broadcast/
+
+# Dependencies (installed via forge install / clone)
+lib/forge-std/

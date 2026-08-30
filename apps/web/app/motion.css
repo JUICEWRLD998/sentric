@@ -1,0 +1,23 @@
+/* ============================================================
+   Noviq UI — motion.css  (single source of feel)
+   Mirrored byte-for-byte in lib/motion.ts so Framer Motion and
+   CSS share identical easings + durations.
+   Copy verbatim from the Noviq UI Playbook §5.1.
+   ============================================================ */
+
+:root {
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);   /* default: confident settle */
+  --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);  /* UI micro-interactions      */
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1); /* playful overshoot          */
+
+  --dur-1:120ms; --dur-2:200ms; --dur-3:320ms; --dur-4:500ms; --dur-5:800ms;
+  --transition-colors: color var(--dur-2) var(--ease-out-quart),
+    background-color var(--dur-2) var(--ease-out-quart), border-color var(--dur-2) var(--ease-out-quart);
+}
+
+/* Global reduced-motion kill-switch */
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{ animation-duration:.01ms !important; animation-iteration-count:1 !important;
+    transition-duration:.01ms !important; scroll-behavior:auto !important; }
+}
