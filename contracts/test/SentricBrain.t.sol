@@ -6,6 +6,7 @@ import {SentricBrain} from "../src/SentricBrain.sol";
 import {SomniaExtensions} from "@somnia-chain/reactivity-contracts/interfaces/SomniaExtensions.sol";
 import {ISomniaReactivityPrecompile} from "@somnia-chain/reactivity-contracts/interfaces/ISomniaReactivityPrecompile.sol";
 import {ISomniaEventHandler} from "@somnia-chain/reactivity-contracts/interfaces/ISomniaEventHandler.sol";
+import {IAgentRequester} from "../src/lib/IAgentRequester.sol";
 
 /// @dev Minimal stand-in for the Somnia reactivity precompile (0x0100):
 ///      records subscription data and can replay an EpochTick at the handler
@@ -63,7 +64,7 @@ contract SentricBrainTest is Test {
         // Install the mock precompile's code at the real precompile address.
         vm.etch(PRECOMPILE, type(MockPrecompile).runtimeCode);
         precompile = MockPrecompile(PRECOMPILE);
-        brain = new SentricBrain();
+        brain = new SentricBrain(IAgentRequester(address(0)));
         vm.deal(address(brain), 33 ether);
     }
 
