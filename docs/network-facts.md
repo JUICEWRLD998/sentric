@@ -160,3 +160,17 @@ inferToolsChat(string[] roles, string[] messages, string[] mcpServerUrls, Onchai
 - Markets die on schedule and respawn; settled markets leave the live list; scan recently-settled to redeem.
 - Reactivity: precompile `0x0100`; contract must hold ≥ 32 SOMI/STT; min base fee 6 gWei (6,000,000,000 wei); no on-chain wildcard subscriptions; avoid recursive re-triggers.
 - Agents: implement `receive()`; gate `handleResponse`; handle Success/Failed/TimedOut; deposit more than the floor.
+
+## 6. Reactivity — CONFIRMED interfaces (from `@somnia-chain/reactivity-contracts@0.2.1`, verified in `contracts/lib/reactivity-contracts/`)
+
+- **Base class:** `SomniaEventHandler` — external `onEvent(address emitter, bytes32[] calldata eventTopics, bytes calldata data)` gates `msg.sender == 0x0100` (reverts `OnlyReactivityPrecompile` otherwise), then calls the internal `_onEvent(emitter, eventTopics, data)` you override. Also implements ERC-165.
+- **Subscribe (library `SomniaExtensions`, internal):**
+  `subscribe(address handler, SubscriptionFilter memory filter, SubscriptionOptions memory options) returns (uint256 subscriptionId)`
+  - `SubscriptionFilter { bytes32[4] eventTopics; address origin; address emitter; }` — at least ONE non-wildcard criterion required (`EmptyFilter`).
+  - `SubscriptionOptions { uint64 priorityFeePerGas; uint64 maxFeePerGas; uint64 gasLimit; }` — `defaultSubscriptionOptions()` = {0, 20 gwei, 10M gas}. Validation: `priorityFeePerGas + 6 gwei <= maxFeePerGas` (`InvalidMaxFeePerGas`).
+  - Requires `address(this).balance >= 32 ether` on the **subscribing contract itself** (checked inside `_subscribe`) — reverts `InsufficientBalance`. The owner is the contract that calls `subscribe`; callbacks are paid from its balance.
+  - Convenience: `scheduleSubscriptionAtBlock/AtEpoch/AtTimestamp`, `unsubscribe(uint256)`, `getSubscriptionInfo(uint256)`.
+- **System events (emitter = 0x0100):** `BlockTick(uint64 indexed blockNumber)` — every block (~100ms); `EpochTick(uint64 indexed epochNumber, uint64 indexed blockNumber)` — every **3000 ledger blocks ≈ 5 minutes** (testnet + mainnet, per docs.somnia.network sustained-use-gas-discounts); `Schedule(uint256 indexed timestampMillis)`. Topic0 = `EventName.selector`.
+- **Callback gas math (6 gwei base, ~45k gas emit-event callback):** ~0.00027 STT/callback. BlockTick ≈ 233 STT/day (drains the 32 STT reserve in hours — NOT viable as a standing subscription); EpochTick ≈ 0.078 STT/day (negligible). → **Subscribe to EpochTick, not BlockTick.**
+- **Constants:** precompile address `0x0100`; `SUBSCRIPTION_OWNER_MINIMUM_BALANCE = 32 ether`; `MINIMUM_BASE_FEE_PER_GAS = 6 gwei`; `MAXIMUM_HANDLER_GAS_LIMIT = 200_000_000`; defaults above.
+- **Phase 1 implementation (SentricBrain):** `arm()` (payable, owner-only) subscribes to `EpochTick.selector` with wildcard epoch + emitter 0x0100; `_onEvent` emits `TickObserved(block.number, block.timestamp)`; `disarm()` unsubscribes. Deploy funds 33 STT (32 reserve + callback gas).

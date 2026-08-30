@@ -565,15 +565,22 @@ somnia/
 
 ### Phase 0 — DONE (verified with real tool output)
 - Monorepo scaffolded (pnpm workspaces: `apps/web`, `packages/sdk-shared`; `contracts/` is a Foundry project outside the workspace).
-- Foundry v1.8.1 installed; `forge build` passes and `forge test` = 4/4 pass.
-- `apps/web`: Next.js 16.3.3 + Noviq UI (tokens/motion/patterns + Framer presets), typecheck clean, `pnpm dev` serves HTTP 200 (title "Sentric").
+- Foundry v1.8.1 installed; `forge build` passes and `forge test` = 14/14 pass (10 new SentricBrain reactivity tests + 4 vault).
+- `apps/web`: Next.js 16.3.3 + Noviq UI (tokens/motion/patterns + Framer presets), typecheck clean (added missing `typecheck` script → `tsc --noEmit`), `pnpm build` green, `pnpm dev` serves HTTP 200 (title "Sentric").
 - `packages/sdk-shared`: typechecks, 21/21 tests pass.
 - All confirmed network facts live in **`docs/network-facts.md`**.
+
+### Phase 1 — IN PROGRESS (reactivity self-wake proven on testnet)
+- **`SentricBrain.sol` rewritten** as a real `SomniaEventHandler` (vendored `@somnia-chain/reactivity-contracts@0.2.1` into `contracts/lib/reactivity-contracts/`, remapped in `foundry.toml`). Owner-gated `arm()` (payable — funds the ≥32 STT reserve + subscribes to `EpochTick.selector`), `disarm()` (unsubscribes), `_onEvent` emits `TickObserved(block.number, block.timestamp)`, gated to `msg.sender == 0x0100` by the base contract. The old `IAgentPlatform`/`ISomniaReactivityPrecompile` stubs were NOT the real ABI — the real one is the npm package (documented in `docs/network-facts.md` §6).
+- **Deployed on testnet (50312):** SentricBrain `0x213714e59e6e70946d45bd6a534229d0d9165f76` (deploy tx `0x79a112b80ebb39a36110efc52f632b4bfb203a6dd7b57becdb4c9613019b61da` @ block 475203389; arm tx `0x1996b44467669a535517661babf7555ce7161cf425ff349b465f7826062001ce` @ block 475203415). Contract holds **33 STT**; subscription **id 14853920** verified via `getSubscriptionInfo` (EpochTick topic, emitter 0x0100, handler = brain, onEvent selector, 20 gwei max fee, 10M gas, owner = brain).
+- **Milestone (pending):** `cast logs` stream of `TickObserved` with no manual tx — EpochTick fires every 3000 blocks ≈ 5 min; first tick expected @ block ~475206000.
 
 ### Confirmed (no longer TODO)
 - Testnet: chain id 50312, RPC https://api.infra.testnet.somnia.network, faucet https://testnet.somnia.network.
 - Event Contracts venue addresses, collateral (tUSDC `0x70a86D8842FB63C4Ad2b7cdddF530eBf1BB25d8E`, 6 decimals), Somnia Agents platform (testnet `0x037Bb9C718F3f7fe5eCBDB0b600D607b52706776`).
 - Full `IAgentRequester` / `IAgentRequesterHandler` interfaces, agent method signatures (`fetchUint`/`fetchString`, `inferString`/`inferNumber`), and fee sizing — verbatim in `docs/network-facts.md`.
+- Reactivity: EpochTick = 3000 ledger blocks ≈ 5 min (testnet + mainnet); BlockTick would cost ~233 STT/day vs EpochTick ~0.08 STT/day; subscribe owner must hold ≥ 32 STT at subscribe time — full confirmed interfaces in `docs/network-facts.md` §6.
+- Deployer funded via GCP Shannon faucet (1 STT/request) + Discord faucet (51 STT total).
 
 ### Remaining TODOs (unblock the next phases)
 1. **Phase 2:** fetch the literal `agentId`s for `json-fetch` and `llm-inference` from https://agents.testnet.somnia.network.

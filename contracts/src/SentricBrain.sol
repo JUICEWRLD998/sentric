@@ -1,23 +1,25 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.30;
 
-import {IAgentPlatform} from "./lib/IAgentPlatform.sol";
-import {IVenue} from "./lib/IVenue.sol";
+import {SomniaEventHandler} from "@somnia-chain/reactivity-contracts/SomniaEventHandler.sol";
+import {SomniaExtensions} from "@somnia-chain/reactivity-contracts/interfaces/SomniaExtensions.sol";
+import {ISomniaReactivityPrecompile} from "@somnia-chain/reactivity-contracts/interfaces/ISomniaReactivityPrecompile.sol";
 
 /// @title SentricBrain
-/// @notice The reactive "brain" of Sentric: self-wakes via Somnia on-chain
-///         reactivity, fetches price/vol (JSON-API agent), decides (on-chain
-///         LLM agent), and places hedges on the DreamDEX Event Contracts venue.
-/// @dev This skeleton intentionally does NOT import the Somnia
-///      `reactivity-contracts` npm package yet; it exposes a plain
-///      `onEvent`-style entrypoint that the real `SomniaEventHandler._onEvent`
-///      override will route into during Phase 1.
-contract SentricBrain {
+/// @notice The reactive "brain" of Sentric — Phase 1: prove the self-waking loop.
+/// @dev Extends the official SomniaEventHandler. The reactivity precompile
+///      (0x0100) calls onEvent() via a synthetic tx in the same block whenever
+///      a subscribed system event fires; the base contract gates msg.sender to
+///      0x0100, so nobody can trigger side effects manually. Phase 1 subscribes
+///      to EpochTick and emits TickObserved — no keeper, no server.
+///      Phase 2 will add the JSON-API -> LLM decision cycle, Phase 3 the venue
+///      order placement.
+contract SentricBrain is SomniaEventHandler {
     // ---------------------------------------------------------------------
     // Types
     // ---------------------------------------------------------------------
 
-    /// @notice Async agent-call state machine.
+    /// @notice Async agent-call state machine (advanced by Phase 2 callbacks).
     ///         Idle -> Fetching -> Deciding -> (Idle | hedge placement).
     enum State {
         Idle, // no cycle in flight
@@ -28,88 +30,121 @@ contract SentricBrain {
     // ---------------------------------------------------------------------
     // Events
     // ---------------------------------------------------------------------
+
+    /// @notice Emitted every time a subscribed system tick wakes the contract.
     event TickObserved(uint256 indexed blockNumber, uint256 timestamp);
 
-    /// @notice Consensus-verified audit receipt for a completed decision cycle.
-    /// @param inputsHash Keccak of the exact inputs the agent saw (price, vol,
-    ///                   exposure, window) — reconstructable on-chain.
-    /// @param decision   Constrained model output: HEDGE / STAND-DOWN / HOLD.
-    /// @param confidence Model confidence 0..100 (0.81 -> 81).
-    /// @param asset      Asset being hedged (BTC / ETH).
-    event AuditEvent(
-        bytes32 inputsHash,
-        string decision,
-        uint8 confidence,
-        address indexed asset
-    );
+    /// @notice Emitted when the guardian is armed (subscription created).
+    event Armed(address indexed owner, uint256 subscriptionId);
+
+    /// @notice Emitted when the guardian is disarmed (subscription cancelled).
+    event Disarmed(address indexed owner, uint256 subscriptionId);
+
+    // ---------------------------------------------------------------------
+    // Errors
+    // ---------------------------------------------------------------------
+
+    error NotOwner();
+    error AlreadySubscribed();
+    error NotSubscribed();
 
     // ---------------------------------------------------------------------
     // Storage
     // ---------------------------------------------------------------------
-    /// @dev The Somnia Agents platform (JSON-API + LLM inference).
-    IAgentPlatform public agentPlatform;
 
-    /// @dev The DreamDEX Event Contracts venue.
-    IVenue public venue;
+    /// @dev Contract deployer; only they can arm/disarm the reactivity loop.
+    address public immutable owner;
 
-    /// @dev Current async decision-cycle state.
+    /// @dev Reactivity subscription id (0 until armed).
+    uint256 public subscriptionId;
+
+    /// @dev Whether the EpochTick subscription is live.
+    bool public isSubscribed;
+
+    /// @dev Async decision-cycle state (Phase 2).
     State public state = State.Idle;
-
-    /// @dev Correlation id of the in-flight agent request (0 = none).
-    uint256 public pendingRequestId;
 
     // ---------------------------------------------------------------------
     // Constructor
     // ---------------------------------------------------------------------
-    constructor(IAgentPlatform agentPlatform_, IVenue venue_) {
-        agentPlatform = agentPlatform_;
-        venue = venue_;
+
+    constructor() {
+        owner = msg.sender;
     }
 
     // ---------------------------------------------------------------------
-    // Reactivity entrypoint
+    // Modifiers
     // ---------------------------------------------------------------------
 
-    /// @notice Reactivity handler. The precompile (0x0100) calls this via a
-    ///         synthetic transaction in the same block when a subscribed system
-    ///         event (BlockTick / EpochTick) fires.
-    /// @dev Inside the real handler, `msg.sender` is the reactivity precompile
-    ///      (0x0100) and `tx.origin` is the subscription owner.
-    ///      TODO(Phase 1): gate on `msg.sender == 0x0100` and subscribe via
-    ///      `SomniaExtensions.subscribe(...)`; avoid emitting an event that
-    ///      re-triggers this subscription (recursion guard).
-    function onEvent(bytes calldata /* data */) external {
-        emit TickObserved(block.number, block.timestamp);
-        // TODO(Phase 2): run the decision cycle:
-        //   state = Fetching; pendingRequestId = agentPlatform.requestJsonApi(...);
-        //   ... async callback -> handleResponse -> requestLlm -> handleResponse.
+    modifier onlyOwner() {
+        if (msg.sender != owner) revert NotOwner();
+        _;
     }
 
     // ---------------------------------------------------------------------
-    // Async agent callback
+    // Reactivity lifecycle
     // ---------------------------------------------------------------------
 
-    /// @notice Callback invoked by the Agent platform with a request result.
-    /// @dev Anyone can call this — MUST validate `msg.sender == address(agentPlatform)`
-    ///      (TODO Phase 2), and handle Success / Failed / TimedOut.
-    function handleResponse(uint256 /* requestId */, bytes calldata /* response */) external {
-        // TODO(Phase 2): advance the state machine (Fetching -> Deciding ->
-        // Idle), then on HEDGE call vault.placeHedge(...) and emit
-        // AuditEvent(inputsHash, decision, confidence, asset).
+    /// @notice Arm the guardian: subscribe to the EpochTick system event so the
+    ///         chain self-wakes this contract at every epoch boundary — no keeper.
+    /// @dev Payable so one tx can both fund the >= 32 STT gas reserve required
+    ///      by the precompile (checked inside SomniaExtensions._subscribe as
+    ///      address(this).balance) and create the subscription.
+    function arm() external payable onlyOwner {
+        if (isSubscribed) revert AlreadySubscribed();
+
+        SomniaExtensions.SubscriptionFilter memory filter = SomniaExtensions
+            .SubscriptionFilter({
+                eventTopics: [
+                    ISomniaReactivityPrecompile.EpochTick.selector,
+                    bytes32(0),
+                    bytes32(0),
+                    bytes32(0)
+                ],
+                origin: address(0),
+                emitter: SomniaExtensions.SOMNIA_REACTIVITY_PRECOMPILE_ADDRESS
+            });
+
+        subscriptionId = SomniaExtensions.subscribe(
+            address(this),
+            filter,
+            SomniaExtensions.defaultSubscriptionOptions()
+        );
+        isSubscribed = true;
+        emit Armed(owner, subscriptionId);
+    }
+
+    /// @notice Disarm the guardian: cancel the reactivity subscription.
+    /// @dev Safety rail — stops all future callbacks (and their gas costs).
+    function disarm() external onlyOwner {
+        if (!isSubscribed) revert NotSubscribed();
+        SomniaExtensions.unsubscribe(subscriptionId);
+        isSubscribed = false;
+        emit Disarmed(owner, subscriptionId);
     }
 
     // ---------------------------------------------------------------------
-    // Decision helpers (stubs)
+    // Reactivity callback (precompile 0x0100 calls onEvent -> _onEvent)
     // ---------------------------------------------------------------------
 
-    /// @notice Emit an audit receipt for a completed decision cycle.
-    /// TODO(Phase 2): call this with the real inputsHash + decision + confidence.
-    function emitAudit(
-        bytes32 inputsHash,
-        string calldata decision,
-        uint8 confidence,
-        address asset
-    ) external {
-        emit AuditEvent(inputsHash, decision, confidence, asset);
+    /// @inheritdoc SomniaEventHandler
+    function _onEvent(
+        address,
+        bytes32[] calldata eventTopics,
+        bytes calldata
+    ) internal override {
+        // Only react to the system event we subscribed to.
+        if (
+            eventTopics.length != 0 &&
+            eventTopics[0] == ISomniaReactivityPrecompile.EpochTick.selector
+        ) {
+            emit TickObserved(block.number, block.timestamp);
+            // TODO(Phase 2): run the decision cycle:
+            //   state = State.Fetching; agentPlatform.createRequest(...) ->
+            //   handleResponse -> State.Deciding -> handleResponse -> hedge.
+        }
     }
+
+    /// @notice Accept pushed agent rebates (request finalisation) + gas top-ups.
+    receive() external payable {}
 }

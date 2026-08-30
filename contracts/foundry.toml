@@ -4,6 +4,9 @@ out = "out"
 test = "test"
 libs = ["lib"]
 solc = "0.8.30"
+remappings = [
+    "@somnia-chain/reactivity-contracts/=lib/reactivity-contracts/",
+]
 evm_version = "cancun"
 optimizer = true
 optimizer_runs = 200
