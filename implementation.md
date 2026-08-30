@@ -570,10 +570,11 @@ somnia/
 - `packages/sdk-shared`: typechecks, 21/21 tests pass.
 - All confirmed network facts live in **`docs/network-facts.md`**.
 
-### Phase 1 — IN PROGRESS (reactivity self-wake proven on testnet)
+### Phase 1 — DONE (reactivity self-wake proven on testnet)
 - **`SentricBrain.sol` rewritten** as a real `SomniaEventHandler` (vendored `@somnia-chain/reactivity-contracts@0.2.1` into `contracts/lib/reactivity-contracts/`, remapped in `foundry.toml`). Owner-gated `arm()` (payable — funds the ≥32 STT reserve + subscribes to `EpochTick.selector`), `disarm()` (unsubscribes), `_onEvent` emits `TickObserved(block.number, block.timestamp)`, gated to `msg.sender == 0x0100` by the base contract. The old `IAgentPlatform`/`ISomniaReactivityPrecompile` stubs were NOT the real ABI — the real one is the npm package (documented in `docs/network-facts.md` §6).
-- **Deployed on testnet (50312):** SentricBrain `0x213714e59e6e70946d45bd6a534229d0d9165f76` (deploy tx `0x79a112b80ebb39a36110efc52f632b4bfb203a6dd7b57becdb4c9613019b61da` @ block 475203389; arm tx `0x1996b44467669a535517661babf7555ce7161cf425ff349b465f7826062001ce` @ block 475203415). Contract holds **33 STT**; subscription **id 14853920** verified via `getSubscriptionInfo` (EpochTick topic, emitter 0x0100, handler = brain, onEvent selector, 20 gwei max fee, 10M gas, owner = brain).
-- **Milestone (pending):** `cast logs` stream of `TickObserved` with no manual tx — EpochTick fires every 3000 blocks ≈ 5 min; first tick expected @ block ~475206000.
+- **Deployed on testnet (50312):** SentricBrain `0x213714e59e6e70946d45bd6a534229d0d9165f76` (deploy tx `0x79a112b80ebb39a36110efc52f632b4bfb203a6dd7b57becdb4c9613019b61da` @ block 475237693; arm tx `0x1996b44467669a535517661babf7555ce7161cf425ff349b465f7826062001ce` @ block 475237719). Contract holds **~33 STT**; subscription **id 14853920** verified via `getSubscriptionInfo` (EpochTick topic, emitter 0x0100, handler = brain, onEvent selector, 20 gwei max fee, 10M gas, owner = brain).
+- **MILESTONE MET — `cast logs` stream of `TickObserved` with no manual tx:** 4+ synthetic self-txs (from == to == brain, miner 0x0, 82,212 gas each) at blocks 475238999 / 475241999 / 475244999 / 475247999, exactly **3000 blocks / 300 s apart** — EpochTick cadence empirically confirmed. Balance math checks: 33 − 4×(82,212×6 gwei) = 32.99753364 STT.
+- **Deploy quirk:** this RPC's log indexer lags and `eth_getLogs` caps ranges at 1000 blocks — scan in ≤800-block windows and re-verify receipts directly (`eth_getTransactionReceipt`); `cast receipt` gave stale block numbers. `forge script --broadcast` fails with `-32602` on this RPC (doubled `0x` prefix in forge-inspected bytecode + node quirks) → deploy via viem (`scripts/deploy-brain.js`).
 
 ### Confirmed (no longer TODO)
 - Testnet: chain id 50312, RPC https://api.infra.testnet.somnia.network, faucet https://testnet.somnia.network.
