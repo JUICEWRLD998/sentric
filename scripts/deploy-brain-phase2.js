@@ -4,16 +4,19 @@
 // Usage: node scripts/deploy-brain-phase2.js [bytecodePath]
 // Env: SOMNIA_RPC_URL, DEPLOYER_PRIVATE_KEY, AGENT_JSON_API_ID, AGENT_LLM_ID,
 //      JSON_URL, JSON_SELECTOR, JSON_DECIMALS (see .env.example)
-const { createWalletClient, createPublicClient, http, getContractAddress, encodeFunctionData } = require("viem");
+const { createWalletClient, createPublicClient, http, getContractAddress, encodeFunctionData, encodeAbiParameters } = require("viem");
 const { privateKeyToAccount } = require("viem/accounts");
 const fs = require("fs");
 
 const RPC = process.env.SOMNIA_RPC_URL;
 const PK = process.env.DEPLOYER_PRIVATE_KEY;
 const BYTECODE_PATH = process.argv[2] || "C:/Users/fadhm/AppData/Local/Temp/brain-phase2.bytecode";
-const BRAIN_BYTECODE = "0x" + fs.readFileSync(BYTECODE_PATH, "utf8").trim().replace(/^0x/, "");
+const BRAIN_CREATION = "0x" + fs.readFileSync(BYTECODE_PATH, "utf8").trim().replace(/^0x/, "");
 const PLATFORM = "0x037Bb9C718F3f7fe5eCBDB0b600D607b52706776"; // Somnia Agents, testnet
 const OLD_BRAIN = "0x213714e59e6e70946d45bd6a534229d0d9165f76"; // Phase-1 brain (reserve recovery)
+// Constructor takes the platform address — append it to the creation code.
+const BRAIN_BYTECODE =
+  BRAIN_CREATION + encodeAbiParameters([{ type: "address" }], [PLATFORM]).slice(2);
 
 const chain = {
   id: 50312,
@@ -54,26 +57,33 @@ async function main() {
   const selector = process.env.JSON_SELECTOR || "";
   const decimals = Number(process.env.JSON_DECIMALS || "8");
   const arrayMode = (process.env.FETCH_MODE || "array") === "array";
+  const recoverOld = (process.env.RECOVER_OLD || "0") === "1"; // Phase-1 brain has NO sweep(); default skip
+  const doArm = (process.env.ARM || "1") === "1";
   if (jsonId === 0n || llmId === 0n) throw new Error("set AGENT_JSON_API_ID and AGENT_LLM_ID");
   console.log("jsonAgentId:", jsonId.toString(), "llmAgentId:", llmId.toString());
   console.log("json params:", url, "|", JSON.stringify(selector), "|", decimals, "| arrayMode:", arrayMode);
 
-  // 1. Recover the Phase-1 brain reserve (disarm -> sweep) if it still holds funds.
-  const oldSub = await pub.readContract({ address: OLD_BRAIN, abi: ABI, functionName: "isSubscribed" });
-  if (oldSub) {
-    console.log("disarming old brain", OLD_BRAIN);
-    await wait(
-      await wallet.sendTransaction({ to: OLD_BRAIN, data: encodeFunctionData({ abi: ABI, functionName: "disarm" }) }),
-      "disarm old"
-    );
-  }
-  const oldBal = await pub.getBalance({ address: OLD_BRAIN });
-  if (oldBal > 0n) {
-    console.log("sweeping old brain balance:", oldBal.toString());
-    await wait(
-      await wallet.sendTransaction({ to: OLD_BRAIN, data: encodeFunctionData({ abi: ABI, functionName: "sweep" }) }),
-      "sweep old"
-    );
+  // 1. Optional: recover the Phase-1 brain reserve (disarm -> sweep).
+  //    NOTE: sweep() only exists on the Phase-2 contract; the Phase-1 brain's
+  //    reserve is locked (no transfer-out path) — set RECOVER_OLD=1 only if the
+  //    old contract actually has sweep().
+  if (recoverOld) {
+    const oldSub = await pub.readContract({ address: OLD_BRAIN, abi: ABI, functionName: "isSubscribed" });
+    if (oldSub) {
+      console.log("disarming old brain", OLD_BRAIN);
+      await wait(
+        await wallet.sendTransaction({ to: OLD_BRAIN, data: encodeFunctionData({ abi: ABI, functionName: "disarm" }) }),
+        "disarm old"
+      );
+    }
+    const oldBal = await pub.getBalance({ address: OLD_BRAIN });
+    if (oldBal > 0n) {
+      console.log("sweeping old brain balance:", oldBal.toString());
+      await wait(
+        await wallet.sendTransaction({ to: OLD_BRAIN, data: encodeFunctionData({ abi: ABI, functionName: "sweep" }) }),
+        "sweep old"
+      );
+    }
   }
 
   // 2. Deploy the Phase-2 brain.
@@ -97,10 +107,14 @@ async function main() {
     await wallet.sendTransaction({ to: brain, data: encodeFunctionData({ abi: ABI, functionName: "setFetchMode", args: [arrayMode] }) }),
     "setFetchMode"
   );
-  await wait(
-    await wallet.sendTransaction({ to: brain, value: 33n * 10n ** 18n, data: encodeFunctionData({ abi: ABI, functionName: "arm" }) }),
-    "arm"
-  );
+  if (doArm) {
+    await wait(
+      await wallet.sendTransaction({ to: brain, value: 33n * 10n ** 18n, data: encodeFunctionData({ abi: ABI, functionName: "arm" }) }),
+      "arm"
+    );
+  } else {
+    console.log("skipping arm (ARM=0) — deployer needs >= 33.2 STT to fund the reserve");
+  }
 
   const sub = await pub.readContract({ address: brain, abi: ABI, functionName: "isSubscribed" });
   const sid = await pub.readContract({ address: brain, abi: ABI, functionName: "subscriptionId" });
