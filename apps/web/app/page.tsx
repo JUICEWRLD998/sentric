@@ -1,7 +1,8 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { fadeUp } from "@/lib/motion";
+import Link from "next/link";
+import { fadeUp, staggerParent } from "@/lib/motion";
 import patterns from "./patterns.module.css";
 import styles from "./page.module.css";
 
@@ -13,12 +14,15 @@ export default function Home() {
         className={`${patterns.mesh} ${patterns.filmGrain}`}
         aria-hidden="true"
       />
-      <main className={styles.main}>
+      <motion.main
+        variants={staggerParent(0.1)}
+        initial="hidden"
+        animate="show"
+        className={styles.main}
+      >
         <motion.section
           className={`${patterns.glassCard} ${patterns.edgeLight} ${styles.hero}`}
           variants={fadeUp}
-          initial="hidden"
-          animate="show"
         >
           <p className={styles.eyebrow}>Self-insuring portfolio</p>
           <h1 className={styles.title}>Sentric</h1>
@@ -26,8 +30,16 @@ export default function Home() {
             A portfolio that protects itself — an autonomous guardian living
             entirely on the Somnia blockchain.
           </p>
+          <div className={styles.actions}>
+            <Link className={styles.ctaPrimary} href="/dashboard">
+              Open dashboard
+            </Link>
+            <Link className={styles.ctaSecondary} href="/reason-explorer">
+              See the reasoning
+            </Link>
+          </div>
         </motion.section>
-      </main>
+      </motion.main>
     </>
   );
 }

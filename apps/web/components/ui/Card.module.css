@@ -1,0 +1,55 @@
+.card {
+  display: flex;
+  flex-direction: column;
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-5) var(--space-5) 0;
+}
+
+.title {
+  font-family: var(--font-display);
+  font-size: var(--fs-step-1);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-tight);
+  color: var(--text-primary);
+}
+
+.subtitle {
+  font-size: var(--fs-step--1);
+  color: var(--text-muted);
+}
+
+.body {
+  padding: var(--space-5);
+}
+
+/* Tone tints the top edge + ring. edgeLight owns ::before, so the tint uses ::after. */
+.success {
+  --tone: var(--green-500);
+}
+.warning {
+  --tone: var(--amber-500);
+}
+.danger {
+  --tone: var(--red-500);
+}
+
+.success::after,
+.warning::after,
+.danger::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  background: var(--tone);
+  opacity: 0.85;
+  box-shadow: 0 0 16px var(--tone);
+  pointer-events: none;
+}

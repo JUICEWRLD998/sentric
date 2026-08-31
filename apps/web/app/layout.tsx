@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { Space_Grotesk, Geist, Geist_Mono } from "next/font/google";
 import Script from "next/script";
 import { MotionProvider } from "./motion-provider";
+import WagmiProviders from "./wagmi-provider";
+import Nav from "./nav";
 import "./globals.css";
 
 /*
@@ -43,7 +45,12 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           {`(function(){try{if(localStorage.getItem("app-theme")==="light"){document.documentElement.dataset.theme="light"}}catch(e){}})();`}
         </Script>
         {/* Framer Motion honors the user's OS reduced-motion setting app-wide. */}
-        <MotionProvider>{children}</MotionProvider>
+        <WagmiProviders>
+          <MotionProvider>
+            <Nav />
+            {children}
+          </MotionProvider>
+        </WagmiProviders>
       </body>
     </html>
   );

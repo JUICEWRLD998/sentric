@@ -1,0 +1,94 @@
+.main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  padding: var(--space-5) var(--space-6);
+  max-width: 1080px;
+  margin-inline: auto;
+  width: 100%;
+}
+
+.controls {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+  margin-top: var(--space-4);
+}
+
+.chips {
+  display: flex;
+  gap: var(--space-2);
+  padding-bottom: 2px;
+}
+
+.chip,
+.chipActive {
+  border: 1px solid var(--neutral-800);
+  background: var(--surface-2);
+  color: var(--text-secondary);
+  font-size: var(--fs-step--1);
+  font-family: var(--font-mono-src, ui-monospace, monospace);
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-sm, 8px);
+  cursor: pointer;
+  transition: color var(--dur-2) var(--ease-out-quart),
+    border-color var(--dur-2) var(--ease-out-quart);
+}
+
+.chip:hover {
+  color: var(--text-primary);
+  border-color: var(--neutral-600);
+}
+
+.chipActive {
+  color: var(--violet-300);
+  border-color: var(--violet-600);
+  background: color-mix(in oklch, var(--violet-600) 12%, var(--surface-2));
+}
+
+.statsRow {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: var(--space-3);
+}
+
+.decisionRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.inputsHash {
+  font-size: var(--fs-step--1);
+  color: var(--text-faint);
+  display: inline-flex;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.mono {
+  font-family: var(--font-mono-src, ui-monospace, monospace);
+  color: var(--text-secondary);
+}
+
+.expand {
+  align-self: flex-start;
+  background: none;
+  border: none;
+  color: var(--accent);
+  font-size: var(--fs-step--1);
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.expand:hover {
+  color: var(--accent-hover);
+}
+
+.empty {
+  color: var(--text-faint);
+}
