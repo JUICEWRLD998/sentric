@@ -16,61 +16,146 @@
   margin-top: var(--space-4);
 }
 
-.chips {
-  display: flex;
-  gap: var(--space-2);
-  padding-bottom: 2px;
-}
-
-.chip,
-.chipActive {
-  border: 1px solid var(--neutral-800);
-  background: var(--surface-2);
-  color: var(--text-secondary);
-  font-size: var(--fs-step--1);
-  font-family: var(--font-mono-src, ui-monospace, monospace);
-  padding: var(--space-1) var(--space-3);
-  border-radius: var(--radius-sm, 8px);
-  cursor: pointer;
-  transition: color var(--dur-2) var(--ease-out-quart),
-    border-color var(--dur-2) var(--ease-out-quart);
-}
-
-.chip:hover {
-  color: var(--text-primary);
-  border-color: var(--neutral-600);
-}
-
-.chipActive {
-  color: var(--violet-300);
-  border-color: var(--violet-600);
-  background: color-mix(in oklch, var(--violet-600) 12%, var(--surface-2));
-}
-
-.statsRow {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-  gap: var(--space-3);
-}
-
-.decisionRow {
-  display: flex;
+/* Segmented control — v4 / v2 brain switch */
+.segmented {
+  display: inline-flex;
   align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  background: var(--surface-1);
+}
+
+.seg,
+.segActive {
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: var(--fs-step--1);
+  letter-spacing: var(--tracking-wide);
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-xs);
+  cursor: pointer;
+  transition: var(--transition-colors);
+}
+
+.seg:hover {
+  color: var(--text-primary);
+}
+
+.segActive {
+  color: var(--text-primary);
+  border-color: var(--accent);
+  background: var(--accent-muted);
+}
+
+/* Chronological ledger — hairline separators, flat rows */
+.ledger {
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid var(--border-strong);
+}
+
+.entry {
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.entrySurface {
+  position: relative;
+  display: flex;
+  flex-direction: column;
   gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  background-color: var(--surface-1);
+}
+
+/* Left accent rail keyed to the decision */
+.rail {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: var(--space-1);
+}
+
+.railDanger { background: var(--danger); }
+.railSuccess { background: var(--success); }
+.railHold { background: var(--text-muted); }
+
+.entryTop {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-4);
   flex-wrap: wrap;
 }
 
-.inputsHash {
-  font-size: var(--fs-step--1);
-  color: var(--text-faint);
-  display: inline-flex;
-  gap: var(--space-2);
+.entryMain {
+  display: flex;
   align-items: center;
+  gap: var(--space-4);
 }
 
-.mono {
-  font-family: var(--font-mono-src, ui-monospace, monospace);
+.confidence {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--space-1);
+}
+
+.confidenceValue {
+  font-family: var(--font-display);
+  font-size: var(--fs-step-2);
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--tracking-tight);
+  color: var(--text-primary);
+  line-height: var(--lh-tight);
+  font-variant-numeric: tabular-nums;
+}
+
+.confidenceUnit {
+  font-family: var(--font-mono);
+  font-size: var(--fs-step--1);
+  color: var(--text-faint);
+}
+
+/* Right-aligned mono metadata block */
+.meta {
+  display: flex;
+  align-items: stretch;
+  gap: var(--space-5);
+  margin: 0 0 0 auto;
+  flex-wrap: wrap;
+}
+
+.metaItem {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--space-1);
+  white-space: nowrap;
+}
+
+.metaLabel {
+  font-family: var(--font-mono);
+  font-size: var(--fs-step--1);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.metaValue {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: var(--fs-step--1);
   color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.entryBottom {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
 }
 
 .expand {
@@ -78,15 +163,21 @@
   background: none;
   border: none;
   color: var(--accent);
+  font-family: var(--font-mono);
   font-size: var(--fs-step--1);
+  letter-spacing: var(--tracking-wide);
   cursor: pointer;
   padding: 0;
   text-decoration: underline;
-  text-underline-offset: 3px;
+  text-underline-offset: var(--space-1);
 }
 
 .expand:hover {
   color: var(--accent-hover);
+}
+
+.raw {
+  padding-top: var(--space-1);
 }
 
 .empty {

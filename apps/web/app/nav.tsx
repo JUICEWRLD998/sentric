@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { Logo, Pulse } from "@/components/ui";
 import ConnectButton from "./connect-button";
 import styles from "./nav.module.css";
 
@@ -16,23 +17,30 @@ export default function Nav() {
 
   return (
     <header className={styles.header}>
-      <Link href="/" className={styles.brand}>
-        <span className={styles.brandMark} aria-hidden="true" />
-        Sentric
-      </Link>
+      <Logo href="/" />
       <nav className={styles.links} aria-label="Main">
         {LINKS.map((l) => (
           <Link
             key={l.href}
             href={l.href}
-            className={pathname === l.href ? `${styles.link} ${styles.active}` : styles.link}
+            className={
+              pathname === l.href
+                ? `${styles.link} ${styles.active}`
+                : styles.link
+            }
             aria-current={pathname === l.href ? "page" : undefined}
           >
             {l.label}
           </Link>
         ))}
       </nav>
-      <ConnectButton />
+      <div className={styles.right}>
+        <span className={styles.status}>
+          <span className={styles.statusName}>Somnia</span>
+          <Pulse tone="success" label="testnet" />
+        </span>
+        <ConnectButton />
+      </div>
     </header>
   );
 }

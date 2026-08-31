@@ -18,7 +18,11 @@ export default function ConnectButton() {
   const mounted = useSyncExternalStore(emptySubscribe, () => true, () => false);
 
   if (!mounted) {
-    return <Button size="sm" variant="ghost" disabled>Connect</Button>;
+    return (
+      <Button size="sm" variant="primary" disabled>
+        Connect wallet
+      </Button>
+    );
   }
 
   if (isConnected && address) {

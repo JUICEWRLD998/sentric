@@ -46,3 +46,16 @@
 .mesh::after  { background-image:
     radial-gradient(40% 44% at 68% 78%, oklch(0.50 0.14 300 / 0.30), transparent 70%),
     radial-gradient(30% 34% at 30% 82%, oklch(0.62 0.16 250 / 0.24), transparent 70%); }
+
+/* 4.5 Ledger grid — faint 1px lattice for console / inspect surfaces (static). */
+.gridLines {
+  background-image:
+    linear-gradient(to right, oklch(0.44 0.023 265 / 0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, oklch(0.44 0.023 265 / 0.05) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+
+/* 4.6 Vignette — soft darkening toward the edges for depth (static). */
+.vignette {
+  background: radial-gradient(120% 100% at 50% 0%, transparent 50%, oklch(0.10 0.02 265 / 0.6) 100%);
+}

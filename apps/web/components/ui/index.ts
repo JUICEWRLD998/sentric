@@ -12,3 +12,6 @@ export * from "./Container";
 export * from "./Stack";
 export * from "./Grid";
 export * from "./PageHeader";
+export * from "./Logo";
+export * from "./SectionHeading";
+export * from "./Pulse";

@@ -1,0 +1,25 @@
+.logo {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  text-decoration: none;
+  color: var(--text-primary);
+}
+
+.mark {
+  display: inline-flex;
+  color: var(--accent);
+  filter: drop-shadow(0 0 10px oklch(0.62 0.19 285 / 0.5));
+}
+
+.svg {
+  display: block;
+}
+
+.wordmark {
+  font-family: var(--font-display);
+  font-size: var(--fs-step-2);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-tight);
+  line-height: 1;
+}

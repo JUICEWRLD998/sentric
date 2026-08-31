@@ -8,6 +8,49 @@
   width: 100%;
 }
 
+/* ---- System status strip (hairline grid of glanceable KPIs) ---- */
+.strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 1px;
+  background: var(--border-subtle);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--card-radius);
+  overflow: hidden;
+}
+
+.kpi {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  background: var(--surface-2);
+}
+
+.kpiLabel {
+  font-family: var(--font-mono);
+  font-size: var(--fs-step--1);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wide);
+  color: var(--text-faint);
+}
+
+.kpiValue {
+  font-family: var(--font-mono);
+  font-size: var(--fs-step-1);
+  font-weight: var(--weight-semibold);
+  line-height: var(--lh-snug);
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
+}
+
+.kpiState {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* ---- Shared rows ---- */
 .row {
   display: flex;
   align-items: center;
@@ -21,33 +64,77 @@
   gap: var(--space-3);
 }
 
-.oddsRow {
+.armRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--border-subtle);
+}
+
+/* ---- Premium budget meter ---- */
+.meterBlock {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
 }
 
-.oddsBar {
-  height: 10px;
-  border-radius: 999px;
-  background: var(--neutral-800);
-  overflow: hidden;
+.meterHeader {
   display: flex;
-}
-
-.oddsUp {
-  height: 100%;
-  background: linear-gradient(
-    90deg,
-    var(--violet-600),
-    var(--violet-400)
-  );
-}
-
-.oddsLabels {
-  display: flex;
+  align-items: baseline;
   justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.meterLabel {
+  font-family: var(--font-mono);
   font-size: var(--fs-step--1);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wide);
+  color: var(--text-faint);
+}
+
+.meterValue {
+  font-family: var(--font-mono);
+  font-size: var(--fs-step--1);
+  font-variant-numeric: tabular-nums;
+  color: var(--text-secondary);
+}
+
+.meter {
+  height: var(--space-2);
+  border-radius: var(--radius-full);
+  background: var(--surface-3);
+  overflow: hidden;
+}
+
+.meterFill {
+  height: 100%;
+  border-radius: var(--radius-full);
+  background: linear-gradient(90deg, var(--violet-600), var(--violet-400));
+  box-shadow: 0 0 12px oklch(0.62 0.19 285 / 0.35);
+}
+
+/* ---- Odds bar ---- */
+.oddsBlock {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.oddsHeader {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.oddsUpLabel,
+.oddsDownLabel {
+  font-family: var(--font-mono);
+  font-size: var(--fs-step-1);
+  font-weight: var(--weight-semibold);
   font-variant-numeric: tabular-nums;
 }
 
@@ -59,16 +146,46 @@
   color: var(--amber-400);
 }
 
+.oddsBar {
+  position: relative;
+  height: var(--space-3);
+  border-radius: var(--radius-full);
+  background: var(--warning-muted);
+  overflow: hidden;
+}
+
+/* Midpoint tick — reads the book as a two-sided market. */
+.oddsBar::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 1px;
+  background: var(--surface-0);
+  opacity: 0.6;
+}
+
+.oddsUp {
+  height: 100%;
+  border-radius: var(--radius-full);
+  background: linear-gradient(90deg, var(--violet-700), var(--violet-400));
+  box-shadow: 0 0 12px oklch(0.62 0.19 285 / 0.4);
+}
+
+/* ---- Misc ---- */
 .hint {
+  font-family: var(--font-mono);
   font-size: var(--fs-step--1);
+  font-variant-numeric: tabular-nums;
   color: var(--text-faint);
-  font-family: var(--font-mono-src, ui-monospace, monospace);
 }
 
 .history {
   margin-top: var(--space-2);
 }
 
+/* ---- Hedge history table ---- */
 .table {
   width: 100%;
   border-collapse: collapse;
@@ -77,34 +194,72 @@
 
 .table th {
   text-align: left;
-  font-size: var(--fs-step--2, 0.78rem);
+  font-family: var(--font-mono);
+  font-size: var(--fs-step--1);
+  font-weight: var(--weight-medium);
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: var(--tracking-wide);
   color: var(--text-faint);
   padding: var(--space-2) var(--space-3);
-  border-bottom: 1px solid var(--neutral-800);
+  border-bottom: 1px solid var(--border-strong);
+  white-space: nowrap;
 }
 
 .table td {
-  padding: var(--space-2) var(--space-3);
-  border-bottom: 1px solid var(--neutral-850);
+  padding: var(--space-3);
+  border-bottom: 1px solid var(--border-subtle);
   color: var(--text-secondary);
-  vertical-align: top;
+  vertical-align: middle;
 }
 
-.mono {
-  font-family: var(--font-mono-src, ui-monospace, monospace);
+.table tbody tr {
+  transition: background-color 0.15s ease;
+}
+
+.table tbody tr:hover {
+  background: var(--surface-3);
+}
+
+.table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.num {
+  text-align: right;
+  font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
-  font-size: var(--fs-step--1);
   white-space: nowrap;
+  color: var(--text-muted);
+}
+
+.tx {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  color: var(--text-muted);
 }
 
 .details {
   color: var(--text-secondary);
 }
 
+/* ---- Empty state ---- */
 .empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-7) var(--space-4);
+  text-align: center;
   color: var(--text-faint);
   font-size: var(--fs-step--1);
-  padding: var(--space-3) 0;
+  border: 1px dashed var(--border-subtle);
+  border-radius: var(--radius-md);
+}
+
+.emptyTitle {
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wide);
+  color: var(--text-muted);
 }

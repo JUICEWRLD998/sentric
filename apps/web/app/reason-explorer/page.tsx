@@ -4,7 +4,8 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { fadeUp, staggerParent } from "@/lib/motion";
 import type { Address } from "viem";
-import { Card, Badge, Stat, Stack, PageHeader, CodeBlock, Skeleton, Field, Input } from "@/components/ui";
+import { Badge, Card, PageHeader, CodeBlock, Skeleton, Field, Input } from "@/components/ui";
+import patterns from "@/app/patterns.module.css";
 import { useAuditHistory } from "@/hooks";
 import { ADDRESSES } from "@/lib/config";
 import { shortHash } from "@/lib/format";
@@ -20,6 +21,12 @@ const DECISION_BADGE_TONE: Record<string, "danger" | "success" | "neutral"> = {
   HEDGE: "danger",
   STAND_DOWN: "success",
   HOLD: "neutral",
+};
+
+const RAIL_TONE: Record<string, string> = {
+  danger: styles.railDanger,
+  success: styles.railSuccess,
+  default: styles.railHold,
 };
 
 export default function ReasonExplorerPage() {
@@ -49,11 +56,21 @@ export default function ReasonExplorerPage() {
               spellCheck={false}
             />
           </Field>
-          <div className={styles.chips}>
-            <button className={brain === ADDRESSES.brain ? styles.chipActive : styles.chip} onClick={() => setBrain(ADDRESSES.brain)}>
+          <div className={styles.segmented} role="group" aria-label="Brain version">
+            <button
+              type="button"
+              className={brain === ADDRESSES.brain ? styles.segActive : styles.seg}
+              aria-pressed={brain === ADDRESSES.brain}
+              onClick={() => setBrain(ADDRESSES.brain)}
+            >
               v4 (live)
             </button>
-            <button className={brain === ADDRESSES.brainV2 ? styles.chipActive : styles.chip} onClick={() => setBrain(ADDRESSES.brainV2)}>
+            <button
+              type="button"
+              className={brain === ADDRESSES.brainV2 ? styles.segActive : styles.seg}
+              aria-pressed={brain === ADDRESSES.brainV2}
+              onClick={() => setBrain(ADDRESSES.brainV2)}
+            >
               v2 (historical)
             </button>
           </div>
@@ -69,36 +86,52 @@ export default function ReasonExplorerPage() {
           </p>
         </Card>
       ) : (
-        <Stack gap={4}>
+        <div className={styles.ledger}>
           {receipts.map((r) => {
             const key = `${r.transactionHash}-${r.logIndex}`;
             const cardTone = DECISION_CARD_TONE[r.decision] ?? "default";
             const badgeTone = DECISION_BADGE_TONE[r.decision] ?? "neutral";
+            const railClass = RAIL_TONE[cardTone];
             const isOpen = expanded === key;
             return (
-              <motion.div key={key} variants={fadeUp}>
-                <Card
-                  tone={cardTone}
-                  title={`Decision: ${r.decision}`}
-                  subtitle={`block ${r.blockNumber?.toString() ?? "–"} · ${r.transactionHash ? shortHash(r.transactionHash) : "–"}`}
-                >
-                  <Stack gap={3}>
-                    <div className={styles.statsRow}>
-                      <Stat label="Decision" value={r.decision} sub="constrained set" />
-                      <Stat label="Confidence" value={`${r.confidence}/100`} tone={r.confidence >= 70 ? "success" : "default"} />
-                      <Stat label="Asset" value={shortHash(r.asset ?? "")} sub="BTC · address(1)" />
-                      <Stat label="Block" value={r.blockNumber?.toString() ?? "–"} sub="on-chain receipt" />
-                    </div>
-                    <div className={styles.decisionRow}>
+              <motion.article key={key} variants={fadeUp} className={styles.entry}>
+                <div className={`${styles.entrySurface} ${patterns.gridLines}`}>
+                  <span className={`${styles.rail} ${railClass}`} aria-hidden />
+                  <div className={styles.entryTop}>
+                    <div className={styles.entryMain}>
                       <Badge tone={badgeTone} dot>{r.decision}</Badge>
-                      <span className={styles.inputsHash}>
-                        inputsHash <span className={styles.mono}>{r.inputsHash}</span>
-                      </span>
+                      <div className={styles.confidence}>
+                        <span className={styles.confidenceValue}>{r.confidence}</span>
+                        <span className={styles.confidenceUnit}>/100</span>
+                      </div>
                     </div>
-                    <button className={styles.expand} onClick={() => setExpanded(isOpen ? null : key)}>
+                    <dl className={styles.meta}>
+                      <div className={styles.metaItem}>
+                        <dt className={styles.metaLabel}>block</dt>
+                        <dd className={styles.metaValue}>{r.blockNumber?.toString() ?? "–"}</dd>
+                      </div>
+                      <div className={styles.metaItem}>
+                        <dt className={styles.metaLabel}>tx</dt>
+                        <dd className={styles.metaValue}>{r.transactionHash ? shortHash(r.transactionHash) : "–"}</dd>
+                      </div>
+                      <div className={styles.metaItem}>
+                        <dt className={styles.metaLabel}>inputs</dt>
+                        <dd className={styles.metaValue}>{shortHash(r.inputsHash)}</dd>
+                      </div>
+                    </dl>
+                  </div>
+                  <div className={styles.entryBottom}>
+                    <button
+                      type="button"
+                      className={styles.expand}
+                      onClick={() => setExpanded(isOpen ? null : key)}
+                      aria-expanded={isOpen}
+                    >
                       {isOpen ? "Hide raw receipt" : "Show raw receipt"}
                     </button>
-                    {isOpen && (
+                  </div>
+                  {isOpen && (
+                    <div className={styles.raw}>
                       <CodeBlock
                         label={`AuditEvent · ${r.transactionHash}`}
                         code={JSON.stringify(
@@ -114,13 +147,13 @@ export default function ReasonExplorerPage() {
                           2
                         )}
                       />
-                    )}
-                  </Stack>
-                </Card>
-              </motion.div>
+                    </div>
+                  )}
+                </div>
+              </motion.article>
             );
           })}
-        </Stack>
+        </div>
       )}
     </motion.main>
   );

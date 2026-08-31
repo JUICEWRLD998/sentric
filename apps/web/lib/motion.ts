@@ -18,6 +18,8 @@ export const prefersReducedMotion = () =>
 const tBase = { duration: durationsSec[3], ease: easings.outExpo };
 
 export const fadeUp = { hidden:{opacity:0,y:16}, show:{opacity:1,y:0,transition:tBase} };
+export const fadeUpSm = { hidden:{opacity:0,y:8}, show:{opacity:1,y:0,transition:tBase} };
+export const popIn = { hidden:{opacity:0,scale:0.96}, show:{opacity:1,scale:1,transition:{duration:durationsSec[2],ease:easings.outQuart}} };
 export const fadeIn = { hidden:{opacity:0},      show:{opacity:1,transition:tBase} };
 export const scaleIn= { hidden:{opacity:0,scale:0.96}, show:{opacity:1,scale:1,transition:tBase} };
 export const staggerParent = (stagger=0.08,delay=0)=>({ hidden:{},

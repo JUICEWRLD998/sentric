@@ -78,6 +78,35 @@ svg {
   max-width: 100%;
 }
 
+/* Quiet polish layer: selection, scrollbar, touch tap. */
+::selection {
+  background: oklch(0.62 0.19 285 / 0.35);
+  color: var(--neutral-50);
+}
+
+html {
+  -webkit-tap-highlight-color: transparent;
+  text-rendering: optimizeLegibility;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--neutral-700) transparent;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--neutral-800);
+  border-radius: var(--radius-full);
+  border: 2px solid var(--surface-0);
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
 /* Money, addresses, hashes read better with tabular figures */
 .tabular,
 [data-tabular] {
