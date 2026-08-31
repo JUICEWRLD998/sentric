@@ -32,10 +32,20 @@ export function useAuditHistory(
       const { events } = await fetchWindowedEvents({
         address,
         event: "AuditEvent",
-        maxWindows: 150,
+        maxWindows: 600, // 600 × 800 blocks ≈ 480k blocks (~13h at 10 blk/s) — reaches the demo audits (~418k back)
         windowBlocks: 800,
+        concurrency: 12,
       });
-      return events.map(parseAuditEvent).slice(-limit).reverse();
+      return events
+        .flatMap((log) => {
+          try {
+            return [parseAuditEvent(log)];
+          } catch {
+            return [];
+          }
+        })
+        .slice(-limit)
+        .reverse();
     },
     refetchInterval: 30_000,
     retry: 1,
@@ -92,8 +102,9 @@ export function useHedgeTimeline(brainAddress?: Address | string): TimelineEntry
     queryFn: async () => {
       const { events } = await fetchWindowedEvents({
         address,
-        maxWindows: 150,
+        maxWindows: 600, // 600 × 800 blocks ≈ 480k blocks (~13h at 10 blk/s) — reaches the demo audits (~418k back)
         windowBlocks: 800,
+        concurrency: 12,
       });
 
       const entries: TimelineEntry[] = [];

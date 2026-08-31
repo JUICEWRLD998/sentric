@@ -101,6 +101,8 @@ export interface FetchWindowedEventsParams {
   toBlock?: bigint | number | "latest";
   maxWindows?: number;
   windowBlocks?: number;
+  /** How many windows to fetch concurrently (default 1 = strict sequential). */
+  concurrency?: number;
 }
 
 export interface WindowedEventsResult {
@@ -110,6 +112,11 @@ export interface WindowedEventsResult {
   fromBlockReached: boolean;
 }
 
+/**
+ * NOTE: the Somnia testnet RPC IGNORES topic filters in eth_getLogs
+ * (verified 2026-08-31 — a bogus topic still returned logs), so when
+ * `event` is given we additionally filter by topic0 client-side.
+ */
 export async function fetchWindowedEvents({
   address,
   event,
@@ -118,6 +125,7 @@ export async function fetchWindowedEvents({
   toBlock = "latest",
   maxWindows = 50,
   windowBlocks = 800,
+  concurrency = 1,
 }: FetchWindowedEventsParams): Promise<WindowedEventsResult> {
   const win = BigInt(windowBlocks);
   const maxW = maxWindows > 0 ? maxWindows : 1;
@@ -128,30 +136,46 @@ export async function fetchWindowedEvents({
   const bottomBlock = fromBlock !== undefined ? BigInt(fromBlock) : 0n;
 
   const topic0 = event ? encodeEventTopics({ abi, eventName: event })[0] : undefined;
+  const conc = Math.max(1, Math.min(concurrency, maxW));
 
-  const all: Log[] = [];
+  // Build the window list (backward from toBlock), clamping to fromBlock.
+  const windows: { start: bigint; end: bigint }[] = [];
   let cursor = topBlock;
   let fromBlockReached = false;
-
   for (let i = 0; i < maxW; i++) {
-    const windowEnd = cursor;
-    let windowStart = windowEnd - win + 1n;
-    if (windowStart < bottomBlock) windowStart = bottomBlock;
-    if (windowStart > windowEnd) break; // no blocks left to scan
-
-    const logs = await publicClient.getLogs({
-      address,
-      ...(topic0 ? { topics: [topic0] as const } : {}),
-      fromBlock: windowStart,
-      toBlock: windowEnd,
-    });
-    all.push(...logs);
-
-    if (windowStart <= bottomBlock) {
+    const end = cursor;
+    let start = end - win + 1n;
+    if (start < bottomBlock) start = bottomBlock;
+    if (start > end) break; // no blocks left to scan
+    windows.push({ start, end });
+    if (start <= bottomBlock) {
       fromBlockReached = true;
       break;
     }
-    cursor = windowStart - 1n;
+    cursor = start - 1n;
+  }
+
+  // Fetch windows in batches; failures leave gaps (the query-level retry
+  // handles flaky RPC, and a later refetch fills the gap).
+  const all: Log[] = [];
+  for (let i = 0; i < windows.length; i += conc) {
+    const batch = windows.slice(i, i + conc);
+    const settled = await Promise.allSettled(
+      batch.map((w) =>
+        publicClient.getLogs({
+          address,
+          ...(topic0 ? { topics: [topic0] as const } : {}),
+          fromBlock: w.start,
+          toBlock: w.end,
+        })
+      )
+    );
+    for (const r of settled) {
+      if (r.status === "fulfilled") {
+        const logs = topic0 ? r.value.filter((l) => l.topics[0] === topic0) : r.value;
+        all.push(...logs);
+      }
+    }
   }
 
   all.sort((a, b) => {
