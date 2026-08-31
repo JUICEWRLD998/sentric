@@ -5,6 +5,8 @@ import {SomniaEventHandler} from "@somnia-chain/reactivity-contracts/SomniaEvent
 import {SomniaExtensions} from "@somnia-chain/reactivity-contracts/interfaces/SomniaExtensions.sol";
 import {ISomniaReactivityPrecompile} from "@somnia-chain/reactivity-contracts/interfaces/ISomniaReactivityPrecompile.sol";
 import {AgentTypes, IAgentRequester, IAgentRequesterHandler, IAgentMethods} from "./lib/IAgentRequester.sol";
+import {IBinaryPool, IBinarySettlement, IERC20} from "./lib/IBinaryVenue.sol";
+import {SentricVault} from "./SentricVault.sol";
 
 /// @title SentricBrain
 /// @notice The reactive "brain" of Sentric — Phase 2: self-wake (reactivity) +
@@ -56,6 +58,15 @@ contract SentricBrain is SomniaEventHandler, IAgentRequesterHandler {
     event JsonParamsSet(string url, string priceSelector, uint8 decimals);
     event FetchModeSet(bool arrayFetch);
     event AgentFeesSet(uint256 jsonFee, uint256 llmFee);
+    event HedgeConfigSet(
+        address vault,
+        uint256 exposureNotional,
+        uint256 maxPremiumPerWindow,
+        uint256 expectedMoveBps,
+        uint256 downPriceBps
+    );
+    event HedgeExecuted(uint256 size, uint256 yesPrice, uint8 confidence);
+    event HedgeRedeemed(uint8 outcomeIdx, uint256 amount, uint256 collateralOut);
     event Swept(address indexed owner, uint256 amount);
 
     // ---------------------------------------------------------------------
@@ -116,6 +127,13 @@ contract SentricBrain is SomniaEventHandler, IAgentRequesterHandler {
     int256 internal _lastChangeBps; // 24h change, basis points (close vs open, or vs prev cycle)
     int256 internal _lastVolBps; // (high-low)/close basis points (0 in scalar mode)
 
+    /// @dev Phase 3: the vault the agent executes hedges through + sizing knobs.
+    SentricVault public vault;
+    uint256 public exposureNotional; // 6-dec tUSDC units (1_000_000 = 1 USDC)
+    uint256 public maxPremiumPerWindow; // 6-dec tUSDC units
+    uint256 public expectedMoveBps = 200; // insure against a 2% adverse move
+    uint256 public downPriceBps = 4500; // P(Down) = 45% (operator-set from the book)
+
     // ---------------------------------------------------------------------
     // Constructor
     // ---------------------------------------------------------------------
@@ -165,6 +183,28 @@ contract SentricBrain is SomniaEventHandler, IAgentRequesterHandler {
         jsonFee = jsonFee_;
         llmFee = llmFee_;
         emit AgentFeesSet(jsonFee_, llmFee_);
+    }
+
+    /// @notice Point the agent at its execution vault + sizing parameters.
+    function setHedgeConfig(
+        SentricVault vault_,
+        uint256 exposureNotional_,
+        uint256 maxPremiumPerWindow_,
+        uint256 expectedMoveBps_,
+        uint256 downPriceBps_
+    ) external onlyOwner {
+        vault = vault_;
+        exposureNotional = exposureNotional_;
+        maxPremiumPerWindow = maxPremiumPerWindow_;
+        expectedMoveBps = expectedMoveBps_;
+        downPriceBps = downPriceBps_;
+        emit HedgeConfigSet(
+            address(vault_),
+            exposureNotional_,
+            maxPremiumPerWindow_,
+            expectedMoveBps_,
+            downPriceBps_
+        );
     }
 
     /// @notice Whether a full decision cycle can run (ids + fetch config set).
@@ -425,8 +465,94 @@ contract SentricBrain is SomniaEventHandler, IAgentRequesterHandler {
         );
         state = State.Idle;
         emit AuditEvent(inputsHash, decision, confidence, ASSET_BTC);
-        // TODO(Phase 3): if decision == "HEDGE" -> vault.placeHedge(...) with
-        // size = f(exposure, P(Down)) capped by max premium per window.
+
+        // Phase 3: if the model says HEDGE, size and execute a Down order.
+        if (keccak256(bytes(decision)) == keccak256("HEDGE")) {
+            _executeHedge(confidence);
+        }
+    }
+
+    /// @notice Size and place the Down-contract hedge via the vault.
+    function _executeHedge(uint8 confidence) internal {
+        if (address(vault) == address(0) || exposureNotional == 0 || maxPremiumPerWindow == 0) {
+            return;
+        }
+        uint256 downPrice = (downPriceBps * 1e18) / 10_000; // bps -> 1e18
+        uint256 size = vault.sizeHedge(
+            exposureNotional,
+            downPrice,
+            maxPremiumPerWindow,
+            expectedMoveBps
+        );
+        if (size == 0) return;
+        uint256 sizeWhole = size / 1e6; // 6-dec units -> whole outcome tokens
+        if (sizeWhole == 0) return;
+        uint256 yesPrice = 1e6 - downPriceBps * 100; // P(Up) raw 6-dec (1 - P(Down))
+        vault.placeHedge(sizeWhole, yesPrice);
+        emit HedgeExecuted(sizeWhole, yesPrice, confidence);
+    }
+
+    /// @notice Manual override: the owner can trigger the sized hedge now
+    ///         (the demo's "manual pulse" fallback and an operator safety rail).
+    function manualHedge() external onlyOwner {
+        _executeHedge(0);
+    }
+
+    /// @notice Redeem a settled position through the vault (owner/ops path;
+    ///         Phase 4 automates redemption inside the decision cycle).
+    function manualRedeem(uint8 outcomeIdx, uint256 amount)
+        external
+        onlyOwner
+        returns (uint256 out)
+    {
+        if (address(vault) == address(0)) revert NotConfigured();
+        out = vault.redeemSettled(outcomeIdx, amount);
+        emit HedgeRedeemed(outcomeIdx, amount, out);
+    }
+
+    /// @notice Re-point the vault at a live market (owner/ops path — lets the
+    ///         operator follow rolling windows without redeploying the vault).
+    /// @dev Grants the new pool a fresh escrow approval — the vault's
+    ///      allowance is per-pool, and placeBinaryOrder pulls collateral from
+    ///      the vault via transferFrom.
+    function manualSetVenue(
+        IBinaryPool pool_,
+        IBinarySettlement settlement_,
+        IERC20 collateral_,
+        bytes32 marketId_
+    ) external onlyOwner {
+        if (address(vault) == address(0)) revert NotConfigured();
+        vault.setVenue(pool_, settlement_, collateral_, marketId_);
+        vault.approvePool(type(uint256).max);
+    }
+
+    /// @notice One-tx hedge: re-point the vault at a live window, approve its
+    ///         pool, size from the config knobs and place the BUY_NO order.
+    /// @param pool_         The live window's BinaryPool.
+    /// @param marketId_     Module marketId (record-keeping).
+    /// @param downPriceBps_ P(Down) implied by the live book (drives sizing +
+    ///                      the premium cap via downPriceBps).
+    /// @param yesPrice      YES-side price that crosses the book (raw 6-dec).
+    function manualHedgeNow(
+        IBinaryPool pool_,
+        bytes32 marketId_,
+        uint256 downPriceBps_,
+        uint256 yesPrice
+    ) external onlyOwner {
+        if (address(vault) == address(0)) revert NotConfigured();
+        if (downPriceBps_ >= 10_000) revert NotConfigured();
+        downPriceBps = downPriceBps_;
+        vault.setVenue(pool_, vault.settlement(), vault.collateral(), marketId_);
+        vault.approvePool(type(uint256).max);
+        uint256 downPrice = (downPriceBps * 1e18) / 10_000;
+        uint256 size = vault.sizeHedge(
+            exposureNotional, downPrice, maxPremiumPerWindow, expectedMoveBps
+        );
+        if (size == 0) return;
+        uint256 sizeWhole = size / 1e6;
+        if (sizeWhole == 0) return;
+        vault.placeHedge(sizeWhole, yesPrice);
+        emit HedgeExecuted(sizeWhole, yesPrice, 0);
     }
 
     // ---------------------------------------------------------------------

@@ -30,8 +30,12 @@
 | OracleHub | `0xe40db387cC98601Dd11bd634fF2f3AD5686dE32b` |
 | CollateralRouter | `0xbC0C9834B15ACE38bB50dDaa7d7f7C7CC4DC183C` |
 
-- **Never hardcode a per-market / pool address** — read from the module registry (`markets(marketId)`) or the SDK; pools are recycled across windows.
-- The SDK exports ABIs directly: `binaryModuleReadAbi`, `binaryModuleWriteAbi`, `binarySettlementAbi`, `erc6909Abi`, `oracleHubAbi`. Pull them via `npm pack @somnia-chain/markets-sdk` and read `src/` (human-readable signatures mirror Solidity). **TODO: read the exact `placeOrder` full signature from `binaryModuleWriteAbi`** (the bot-kit shows it truncated: `placeOrder(bool isBid, uint64 userData, uint256 price, uint256 quantity, uint64 expireTimestampNs, uint8 orderType, uint8 selfMatchingOption, address builder, uint96 ...)`).
+- **Never hardcode a per-market / pool address** — read from the module registry (`markets(marketId)`) or the SDK; pools are recycled across windows (the same pool address serves successive windows of a series; nonce increments per window).
+- **`markets(bytes32)` record layout (verified live, SDK `binaryModuleReadAbi`):** `(uint256 oracleQuestionId, uint8 outcomeSlotCount, uint8 voidPolicy, address collateral, uint32 originOperatorId, bytes32 originVenueId, address oracleAdapter, address creator, address market, address pool, uint256 yesId, uint256 noId, uint64 tradingStart, uint64 expiry)` — **expiry/tradingStart are UNIX SECONDS** (NOT ns; the pool's `marketExpiryNs()` is ns — don't mix the two).
+- **Orders go to the per-market BinaryPool**, NOT the module (generic `placeOrder` reverts `UseBinaryPlacement`):
+  `placeBinaryOrder(uint8 kind, uint256 price, uint256 quantity, uint64 expireTimestampNs, uint8 orderType, uint8 selfMatchingOption, address builder, uint96 builderFeeBpsTimes1k, uint64 userData) payable returns (bool success, uint128 id)` — verified against markets-sdk v0.28.1 `tradeAbi.js` (v2 "settlement-extraction" module still uses it). kind 2 = BUY_NO (hedge), orderType 2 = MARKET/IOC, price ALWAYS the YES-side price (raw 6-dec units, tick grid 1000), quantity raw (1e6 raw = 1 whole outcome token; lot 1000, min 1000).
+- **Book reads:** `getBookLevels(bool isYes, uint64 levels)` returns `(uint256 price, uint256 qty)[]` — a **tuple array** (in viem: `outputs: [{ type: 'tuple[]', components: [{type:'uint256'},{type:'uint256'}] }]`; a flat two-field ABI silently returns garbage).
+- **Discovery scripts (this repo):** `scripts/wait-live-window.js [waitMs]` scans `markets()` for a live op-2 5-min window and prints `POOL_ADDRESS/MARKET_ID/DOWN_PRICE_BPS`; `scripts/discover-live-btc.js [fromId] [toId]` lists all live windows. Operator cadence is SPORADIC on testnet (op-4 1-min/5-min runs in bursts with gaps; op-2 5-min is the product series, ~every 5 min at :00/:05/:10/:15).
 
 ## 3. Collateral (per venue)
 

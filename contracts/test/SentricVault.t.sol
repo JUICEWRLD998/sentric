@@ -4,7 +4,6 @@ pragma solidity 0.8.30;
 import {Test} from "forge-std/Test.sol";
 import {SentricVault} from "../src/SentricVault.sol";
 import {SentricBrain} from "../src/SentricBrain.sol";
-import {IVenue} from "../src/lib/IVenue.sol";
 import {IAgentRequester} from "../src/lib/IAgentRequester.sol";
 
 contract SentricVaultTest is Test {
@@ -12,7 +11,7 @@ contract SentricVaultTest is Test {
     SentricBrain internal brain;
 
     function setUp() public {
-        vault = new SentricVault(IVenue(address(0)));
+        vault = new SentricVault();
         brain = new SentricBrain(IAgentRequester(address(0)));
     }
 

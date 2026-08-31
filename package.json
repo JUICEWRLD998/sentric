@@ -8,5 +8,8 @@
     "build": "pnpm --filter web build",
     "typecheck": "pnpm --filter web typecheck",
     "test:contracts": "cd contracts && forge test"
+  },
+  "devDependencies": {
+    "viem": "^2.56.0"
   }
 }
