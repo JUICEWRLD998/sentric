@@ -57,12 +57,17 @@ contract MockBinaryPool {
     uint128 public lastOrderId;
     uint64 public expiryNs = 1_800_000_000_000_000; // ~30 min in ns
     uint64 public nonce = 1;
+    bool public failNext;
     // Real pool params (verified live, docs/venue-live-recipe.md §1): prices and
     // quantities are raw 6-dec collateral units on a 1000-tick grid; 1e6 raw =
     // 1 whole outcome token; min 1000 raw, lot 1000 raw.
     uint256 public tickSize = 1000;
     uint256 public minQuantity = 1000;
     uint256 public lotSize = 1000;
+
+    function setFailNext(bool f) external {
+        failNext = f;
+    }
 
     /// @dev Explicit struct getter (a `public` field would flatten).
     function getLastCall() external view returns (OrderCall memory) {
@@ -80,6 +85,7 @@ contract MockBinaryPool {
         uint96 builderFeeBpsTimes1k,
         uint64 userData
     ) external payable returns (bool, uint128) {
+        if (failNext) revert("mock pool failure");
         _lastCall = OrderCall(
             kind, price, quantity, expireTimestampNs, orderType,
             selfMatchingOption, builder, builderFeeBpsTimes1k, userData
@@ -149,11 +155,17 @@ contract MockSettlement {
     uint256 public lastAmount;
     address public lastTo;
     uint256 public collateralOut = 1;
+    bool public failNext;
+
+    function setFailNext(bool f) external {
+        failNext = f;
+    }
 
     function finalizeAndRedeem(address pool, uint256 outcomeId, uint256 amount, address to)
         external
         returns (uint256)
     {
+        if (failNext) revert("mock settlement failure");
         lastPool = pool;
         lastOutcomeId = outcomeId;
         lastAmount = amount;
@@ -756,6 +768,38 @@ contract SentricVaultTradeTest is Test {
         assertEq(brain.lossStreak(), 1, "one loss");
         brain.resetLossStreak();
         assertEq(brain.lossStreak(), 0, "owner reset");
+    }
+
+    function test_hedge_failure_does_not_wedge_cycle() public {
+        brain.setHedgeConfig(vault, ONE_MILLION_USDC, 100e6, 200, 4500);
+        pool.setFailNext(true);
+        _fireTick();
+        _finalizeCycle("HEDGE");
+        assertEq(pool.lastOrderId(), 0, "no order placed");
+        assertFalse(brain.positionOpen(), "no position recorded");
+        assertEq(uint256(brain.state()), uint256(SentricBrain.State.Idle), "cycle still completes");
+        // The next cycle recovers once the pool accepts again.
+        pool.setFailNext(false);
+        _fireTick();
+        _finalizeCycle("HEDGE");
+        assertEq(pool.lastOrderId(), 1, "order placed on retry");
+    }
+
+    function test_redeem_failure_keeps_position_open() public {
+        brain.setHedgeConfig(vault, ONE_MILLION_USDC, 100e6, 200, 4500);
+        MockBinaryMarket mkt = new MockBinaryMarket();
+        pool.setMarket(address(mkt));
+        _fireTick();
+        _finalizeCycle("HEDGE");
+        mkt.setResolved(true);
+        mkt.setPayout(0, 10_000_000);
+        settlement.setFailNext(true);
+        _fireTick();
+        assertTrue(brain.positionOpen(), "position kept on redeem failure");
+        settlement.setFailNext(false);
+        _fireTick();
+        assertFalse(brain.positionOpen(), "redeemed on retry");
+        assertEq(settlement.lastAmount(), 222_000_000, "redeemed qty");
     }
 
     // ------------------------------------------------------------------

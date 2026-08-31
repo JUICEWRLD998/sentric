@@ -69,6 +69,8 @@ contract SentricBrain is SomniaEventHandler, IAgentRequesterHandler {
     event HedgeRedeemed(uint8 outcomeIdx, uint256 amount, uint256 collateralOut);
     event PositionOpened(uint64 nonce, uint256 qtyRaw, address pool);
     event HedgeExpired(uint64 nonce);
+    event HedgeFailed(uint256 size, uint256 yesPrice);
+    event HedgeRedeemFailed(uint64 nonce);
     event StopLossEngaged(uint256 lossStreak);
     event Swept(address indexed owner, uint256 amount);
 
@@ -514,9 +516,15 @@ contract SentricBrain is SomniaEventHandler, IAgentRequesterHandler {
         uint256 sizeWhole = size / 1e6; // 6-dec units -> whole outcome tokens
         if (sizeWhole == 0) return;
         uint256 yesPrice = 1e6 - downPriceBps * 100; // P(Up) raw 6-dec (1 - P(Down))
-        vault.placeHedge(sizeWhole, yesPrice);
-        _recordPosition();
-        emit HedgeExecuted(sizeWhole, yesPrice, confidence);
+        try vault.placeHedge(sizeWhole, yesPrice) returns (uint128) {
+            _recordPosition();
+            emit HedgeExecuted(sizeWhole, yesPrice, confidence);
+        } catch {
+            // Order rejected (window rolled, book drained, paused...) — the
+            // cycle still completes and the next tick retries. Never wedge the
+            // state machine on an order failure.
+            emit HedgeFailed(sizeWhole, yesPrice);
+        }
     }
 
     /// @dev Record the just-placed order so the next tick can auto-redeem it.
@@ -539,14 +547,20 @@ contract SentricBrain is SomniaEventHandler, IAgentRequesterHandler {
         if (market == address(0)) return;
         if (!IBinaryMarket(market).isResolved()) return;
         uint256[] memory nums = IBinaryMarket(market).payoutNumerators();
-        positionOpen = false;
         if (nums.length >= 2 && nums[1] > 0) {
-            uint256 out = vault.redeemSettled(
+            try vault.redeemSettled(
                 IBinaryPool(lastOrderPool), 1, lastOrderQtyRaw, lastOrderNonce
-            );
-            lossStreak = 0;
-            emit HedgeRedeemed(1, lastOrderQtyRaw, out);
+            ) returns (uint256 out) {
+                positionOpen = false;
+                lossStreak = 0;
+                emit HedgeRedeemed(1, lastOrderQtyRaw, out);
+            } catch {
+                // Settlement not final yet — keep the position and retry on the
+                // next tick (never wedge the cycle on a redeem revert).
+                emit HedgeRedeemFailed(lastOrderNonce);
+            }
         } else {
+            positionOpen = false;
             lossStreak++;
             emit HedgeExpired(lastOrderNonce);
             if (lossStreak >= STOP_LOSS_STREAK) emit StopLossEngaged(lossStreak);
