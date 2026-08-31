@@ -1,0 +1,59 @@
+.viewport {
+  position: fixed;
+  bottom: var(--space-5);
+  right: var(--space-5);
+  z-index: var(--z-toast);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  width: min(calc(var(--space-6) * 12), calc(100vw - var(--space-6)));
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  outline: none;
+  pointer-events: none;
+}
+
+.viewport > * {
+  pointer-events: auto;
+}
+
+.toast {
+  position: relative;
+  padding: var(--space-4) var(--space-5);
+  color: var(--text-primary);
+}
+
+.title {
+  font-family: var(--font-display);
+  font-size: var(--fs-step-0);
+  font-weight: var(--weight-semibold);
+  line-height: var(--lh-snug);
+  color: var(--text-primary);
+}
+
+.description {
+  margin-top: var(--space-1);
+  font-size: var(--fs-step--1);
+  line-height: var(--lh-normal);
+  color: var(--text-muted);
+}
+
+/* Tone ring — layered on top of the glassCard pattern (which owns box-shadow). */
+.toast.success::after,
+.toast.danger::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: inset 0 0 0 1px var(--tone);
+  pointer-events: none;
+}
+
+.toast.success {
+  --tone: var(--green-500);
+}
+
+.toast.danger {
+  --tone: var(--red-500);
+}

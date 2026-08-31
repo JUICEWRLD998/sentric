@@ -1,0 +1,58 @@
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.label {
+  font-size: var(--fs-step--1);
+  font-weight: var(--weight-medium);
+  color: var(--text-secondary);
+}
+
+.input {
+  background: var(--surface-inset);
+  border: 1px solid var(--neutral-800);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-3);
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: var(--fs-step-0);
+  transition:
+    color var(--dur-2) var(--ease-out-quart),
+    background-color var(--dur-2) var(--ease-out-quart),
+    border-color var(--dur-2) var(--ease-out-quart);
+}
+
+.input::placeholder {
+  color: var(--text-faint);
+}
+
+/* Matches the global :focus-visible ring, tuned to the violet accent. */
+.input:focus-visible {
+  outline: 2px solid var(--violet-500);
+  outline-offset: 1px;
+  border-color: var(--violet-500);
+}
+
+.mono {
+  font-family: var(--font-mono);
+}
+
+.errorInput {
+  border-color: var(--red-500);
+}
+.errorInput:focus-visible {
+  border-color: var(--red-500);
+  outline-color: var(--red-500);
+}
+
+.hint {
+  font-size: var(--fs-step--1);
+  color: var(--text-muted);
+}
+
+.errorMsg {
+  font-size: var(--fs-step--1);
+  color: var(--red-500);
+}

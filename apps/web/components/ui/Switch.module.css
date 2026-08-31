@@ -1,0 +1,51 @@
+.switch {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: var(--fs-step-0);
+  cursor: pointer;
+}
+
+.track {
+  position: relative;
+  display: block;
+  flex: none;
+  width: 40px;
+  height: 22px;
+  border: 1px solid var(--neutral-600);
+  border-radius: var(--radius-full);
+  background: var(--neutral-700);
+  transition:
+    background-color var(--dur-2) var(--ease-out-quart),
+    border-color var(--dur-2) var(--ease-out-quart);
+}
+
+.on .track {
+  background: var(--violet-500);
+  border-color: var(--violet-500);
+}
+
+.knob {
+  position: absolute;
+  top: 2px;
+  left: 0;
+  display: block;
+  width: 16px;
+  height: 16px;
+  border-radius: var(--radius-full);
+  background: var(--neutral-50);
+}
+
+.label {
+  font-size: var(--fs-step-0);
+}
+
+.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

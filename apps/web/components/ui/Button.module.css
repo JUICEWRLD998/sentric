@@ -1,0 +1,98 @@
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  font-family: inherit;
+  font-weight: var(--weight-medium);
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+  /* Hover feedback is a transition of COLORS ONLY — no keyframes. */
+  transition:
+    color var(--dur-2) var(--ease-out-quart),
+    background-color var(--dur-2) var(--ease-out-quart),
+    border-color var(--dur-2) var(--ease-out-quart);
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ---- variants ---- */
+.primary {
+  background: var(--violet-500);
+  color: var(--text-inverse);
+}
+.primary:not(:disabled):hover {
+  background: var(--violet-400);
+}
+.primary:not(:disabled):active {
+  background: var(--violet-600);
+}
+
+.secondary {
+  background: var(--surface-2);
+  border-color: var(--neutral-700);
+  color: var(--text-primary);
+}
+.secondary:not(:disabled):hover {
+  background: var(--surface-3);
+  border-color: var(--neutral-600);
+}
+
+.ghost {
+  background: transparent;
+  color: var(--text-secondary);
+}
+.ghost:not(:disabled):hover {
+  background: var(--surface-2);
+  color: var(--text-primary);
+}
+
+.danger {
+  background: var(--red-500);
+  color: var(--text-inverse);
+}
+.danger:not(:disabled):hover {
+  background: var(--red-400);
+}
+.danger:not(:disabled):active {
+  background: var(--red-600);
+}
+
+/* ---- sizes (min-width keeps the button from collapsing while loading) ---- */
+.sm {
+  font-size: var(--fs-step--1);
+  padding: var(--space-1) var(--space-3);
+  min-width: calc(var(--space-5) * 3);
+}
+.md {
+  font-size: var(--fs-step-0);
+  padding: var(--space-2) var(--space-4);
+  min-width: calc(var(--space-6) * 3);
+}
+.lg {
+  font-size: var(--fs-step-1);
+  padding: var(--space-3) var(--space-5);
+  min-width: calc(var(--space-7) * 3);
+}
+
+.label {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.spinner {
+  flex: none;
+  width: 12px;
+  height: 12px;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: var(--radius-full);
+}

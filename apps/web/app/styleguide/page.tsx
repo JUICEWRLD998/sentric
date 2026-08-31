@@ -1,6 +1,7 @@
 import Link from "next/link";
 import patterns from "../patterns.module.css";
 import styles from "./styleguide.module.css";
+import KitDemo from "./kit-demo";
 
 /* Noviq UI Playbook §11 — the living reference: renders every ramp, the
    fluid type scale, and the four surface patterns so the system is verifiable. */
@@ -219,6 +220,11 @@ export default function Styleguide() {
             </span>
           ))}
         </div>
+      </section>
+
+      <section className={styles.section}>
+        <h2 className={styles.h2}>Component kit</h2>
+        <KitDemo />
       </section>
     </div>
   );

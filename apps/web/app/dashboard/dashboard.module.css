@@ -2,6 +2,10 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-5);
+  padding: var(--space-5) var(--space-6);
+  max-width: 1080px;
+  margin-inline: auto;
+  width: 100%;
 }
 
 .row {

@@ -21,7 +21,6 @@ import { useBrainState, useBrainActions, useVaultState, useLiveBook, useHedgeTim
 import { ADDRESSES } from "@/lib/config";
 import { formatUsdc, shortHash, formatPctRaw } from "@/lib/format";
 import brainAbi from "@/lib/abi/brain.json";
-import patterns from "../patterns.module.css";
 import styles from "./dashboard.module.css";
 
 const STATE_TONE: Record<string, "neutral" | "accent" | "warning" | "success" | "danger"> = {
@@ -35,7 +34,7 @@ export default function DashboardPage() {
   const { address, isConnected } = useAccount();
   const brain = useBrainState(ADDRESSES.brain);
   const vault = useVaultState();
-  const book = useLiveBook(vault?.poolAddress);
+  const book = useLiveBook(vault?.poolAddress)?.data ?? null;
   const timeline = useHedgeTimeline(ADDRESSES.brain);
   const actions = useBrainActions();
   const { writeContract, isPending: thresholdPending } = useWriteContract();
@@ -83,7 +82,7 @@ export default function DashboardPage() {
       variants={staggerParent(0.06)}
       initial="hidden"
       animate="show"
-      className={`${patterns.page} ${styles.main}`}
+      className={styles.main}
     >
       <motion.div variants={fadeUp}>
         <PageHeader

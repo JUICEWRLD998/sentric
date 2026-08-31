@@ -1,0 +1,47 @@
+.block {
+  background: var(--surface-inset);
+  border: 1px solid var(--neutral-800);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--neutral-800);
+}
+
+.label {
+  font-family: var(--font-mono);
+  font-size: var(--fs-step--1);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.copyBtn {
+  min-width: 0;
+}
+
+.pre {
+  overflow-x: auto;
+  padding: var(--space-4);
+}
+
+.code {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: var(--fs-step--1);
+  line-height: var(--lh-snug);
+  color: var(--neutral-200);
+  white-space: pre;
+}
+
+.copyText {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
