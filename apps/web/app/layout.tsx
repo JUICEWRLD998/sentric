@@ -4,6 +4,8 @@ import Script from "next/script";
 import { MotionProvider } from "./motion-provider";
 import WagmiProviders from "./wagmi-provider";
 import Nav from "./nav";
+import { Logo } from "@/components/ui";
+import footerStyles from "./footer.module.css";
 import "./globals.css";
 
 /*
@@ -49,6 +51,12 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           <MotionProvider>
             <Nav />
             {children}
+            <footer className={footerStyles.footer}>
+              <Logo href="/" />
+              <p className={footerStyles.text}>
+                Built on Somnia · DreamDEX Event Contracts · Somnia Agents
+              </p>
+            </footer>
           </MotionProvider>
         </WagmiProviders>
       </body>

@@ -6,20 +6,21 @@ import { fadeUp, staggerParent } from "@/lib/motion";
 import { useAccount, useReadContract, useWriteContract } from "wagmi";
 import type { Abi } from "viem";
 import {
-  Card,
   Badge,
-  Stat,
-  Grid,
-  Stack,
-  PageHeader,
-  Slider,
-  Switch,
-  Skeleton,
   Button,
+  Card,
+  Grid,
+  PageHeader,
+  Pulse,
+  Skeleton,
+  Slider,
+  Stack,
+  Stat,
+  Switch,
 } from "@/components/ui";
-import { useBrainState, useBrainActions, useVaultState, useLiveBook, useHedgeTimeline } from "@/hooks";
+import { useBrainActions, useBrainState, useHedgeTimeline, useLiveBook, useVaultState } from "@/hooks";
 import { ADDRESSES } from "@/lib/config";
-import { formatUsdc, shortHash, formatPctRaw } from "@/lib/format";
+import { formatPctRaw, formatUsdc, shortHash } from "@/lib/format";
 import brainAbi from "@/lib/abi/brain.json";
 import styles from "./dashboard.module.css";
 
@@ -61,6 +62,14 @@ export default function DashboardPage() {
 
   const recent = useMemo(() => (timeline ? timeline.slice(0, 8) : []), [timeline]);
 
+  // Premium budget consumption — guarded against a zero/missing window cap.
+  const budgetPct = useMemo(() => {
+    if (!vault || !vault.maxPremiumPerWindowRaw) return 0;
+    const cap = Number(vault.maxPremiumPerWindowRaw);
+    if (cap <= 0) return 0;
+    return Math.min(100, Math.max(0, (Number(vault.windowPremiumSpentRaw) / cap) * 100));
+  }, [vault]);
+
   const saveThresholds = () => {
     if (!address) return;
     writeContract({
@@ -89,14 +98,54 @@ export default function DashboardPage() {
           eyebrow="Live dashboard"
           title="Portfolio guardian"
           description="The on-chain agent in real time — status, market odds and every hedge it has placed."
+          actions={<Pulse tone="success" label="Live" />}
         />
+      </motion.div>
+
+      {/* System status strip — glanceable KPIs */}
+      <motion.div variants={fadeUp}>
+        <div className={styles.strip} role="group" aria-label="Agent status">
+          <div className={styles.kpi}>
+            <span className={styles.kpiLabel}>Agent state</span>
+            <span className={styles.kpiState}>
+              <Badge tone={stateTone} dot>{stateName}</Badge>
+              <Pulse tone={stateTone} live={stateName !== "Idle"} />
+            </span>
+          </div>
+          <div className={styles.kpi}>
+            <span className={styles.kpiLabel}>Position</span>
+            <Badge tone={brain?.positionOpen ? "accent" : "neutral"} dot>
+              {brain?.positionOpen ? "position open" : "no position"}
+            </Badge>
+          </div>
+          <div className={styles.kpi}>
+            <span className={styles.kpiLabel}>Subscription</span>
+            <Badge tone={brain?.isSubscribed ? "success" : "neutral"} dot>
+              {brain?.isSubscribed ? "subscribed" : "not subscribed"}
+            </Badge>
+          </div>
+          <div className={styles.kpi}>
+            <span className={styles.kpiLabel}>Loss streak</span>
+            <span className={styles.kpiValue}>{brain?.lossStreak?.toString() ?? "–"}</span>
+          </div>
+          <div className={styles.kpi}>
+            <span className={styles.kpiLabel}>Open nonce</span>
+            <span className={styles.kpiValue}>{brain?.lastOrderNonce?.toString() ?? "–"}</span>
+          </div>
+          <div className={styles.kpi}>
+            <span className={styles.kpiLabel}>Open qty</span>
+            <span className={styles.kpiValue}>
+              {brain?.lastOrderQtyRaw ? formatUsdc(brain.lastOrderQtyRaw) : "–"}
+            </span>
+          </div>
+        </div>
       </motion.div>
 
       <Grid cols={2} gap={4}>
         {/* Agent status */}
         <motion.div variants={fadeUp}>
           <Card title="Agent" subtitle={shortHash(ADDRESSES.brain)}>
-            <Stack gap={3}>
+            <Stack gap={4}>
               <div className={styles.row}>
                 <Badge tone={stateTone} dot>{stateName}</Badge>
                 {brain?.positionOpen && <Badge tone="accent" dot>position open</Badge>}
@@ -113,13 +162,14 @@ export default function DashboardPage() {
                   sub="outcome tokens"
                 />
               </div>
-              <div className={styles.row}>
+              <div className={styles.armRow}>
                 <Switch
                   checked={!!brain?.isSubscribed}
                   onCheckedChange={(c) => (c ? actions.armBrain() : actions.disarmBrain())}
                   disabled={!isConnected || actions.isPending}
                   label={brain?.isSubscribed ? "Armed" : "Arm the guardian"}
                 />
+                <span className={styles.hint}>33 STT reserve · owner wallet</span>
               </div>
             </Stack>
           </Card>
@@ -128,7 +178,7 @@ export default function DashboardPage() {
         {/* Vault */}
         <motion.div variants={fadeUp}>
           <Card title="Vault" subtitle={shortHash(ADDRESSES.vault)}>
-            <Stack gap={3}>
+            <Stack gap={4}>
               <div className={styles.row}>
                 {vault?.paused && <Badge tone="danger" dot>paused</Badge>}
                 <Badge tone="neutral">
@@ -153,6 +203,23 @@ export default function DashboardPage() {
                   sub="spent today"
                 />
               </div>
+              <div className={styles.meterBlock}>
+                <div className={styles.meterHeader}>
+                  <span className={styles.meterLabel}>Premium budget used</span>
+                  <span className={styles.meterValue}>
+                    {vault
+                      ? `${formatUsdc(vault.windowPremiumSpentRaw)} / ${formatUsdc(vault.maxPremiumPerWindowRaw)}`
+                      : "– / –"}
+                  </span>
+                </div>
+                <div className={styles.meter} aria-hidden="true">
+                  <motion.div
+                    className={styles.meterFill}
+                    animate={{ width: `${budgetPct}%` }}
+                    transition={{ duration: 0.5 }}
+                  />
+                </div>
+              </div>
             </Stack>
           </Card>
         </motion.div>
@@ -161,22 +228,22 @@ export default function DashboardPage() {
         <motion.div variants={fadeUp}>
           <Card title="Live market" subtitle={vault?.poolAddress ? shortHash(vault.poolAddress) : "no pool set"}>
             {book ? (
-              <Stack gap={3}>
-                <div className={styles.oddsRow}>
-                  <div className={styles.oddsBar} aria-hidden="true">
-                    <motion.div
-                      className={styles.oddsUp}
-                      animate={{ width: `${pUp ? Math.round(pUp * 100) : 50}%` }}
-                      transition={{ duration: 0.5 }}
-                    />
-                  </div>
-                  <div className={styles.oddsLabels}>
+              <Stack gap={4}>
+                <div className={styles.oddsBlock}>
+                  <div className={styles.oddsHeader}>
                     <span className={styles.oddsUpLabel}>
                       Up {pUp !== null ? formatPctRaw(book.pUpRaw) : "–"}
                     </span>
                     <span className={styles.oddsDownLabel}>
                       Down {pDown !== null ? formatPctRaw(book.pDownRaw) : "–"}
                     </span>
+                  </div>
+                  <div className={styles.oddsBar} aria-hidden="true">
+                    <motion.div
+                      className={styles.oddsUp}
+                      animate={{ width: `${pUp ? Math.round(pUp * 100) : 50}%` }}
+                      transition={{ duration: 0.5 }}
+                    />
                   </div>
                 </div>
                 <div className={styles.statsRow}>
@@ -239,15 +306,16 @@ export default function DashboardPage() {
           {timeline === undefined ? (
             <Skeleton lines={4} />
           ) : recent.length === 0 ? (
-            <p className={styles.empty}>
-              No hedges yet — arm the guardian and wait for a decision cycle.
-            </p>
+            <div className={styles.empty}>
+              <span className={styles.emptyTitle}>No hedges yet</span>
+              <span>Arm the guardian and wait for a decision cycle.</span>
+            </div>
           ) : (
             <table className={styles.table}>
               <thead>
                 <tr>
                   <th>Event</th>
-                  <th>Block</th>
+                  <th className={styles.num}>Block</th>
                   <th>Details</th>
                   <th>Tx</th>
                 </tr>
@@ -256,9 +324,9 @@ export default function DashboardPage() {
                 {recent.map((e) => (
                   <tr key={`${e.transactionHash}-${e.logIndex}`}>
                     <td><Badge tone="accent">{e.kind}</Badge></td>
-                    <td className={styles.mono}>{e.blockNumber?.toString() ?? "–"}</td>
+                    <td className={styles.num}>{e.blockNumber?.toString() ?? "–"}</td>
                     <td className={styles.details}>{e.summary ?? "–"}</td>
-                    <td className={styles.mono}>
+                    <td className={styles.tx}>
                       {e.transactionHash ? shortHash(e.transactionHash) : "–"}
                     </td>
                   </tr>

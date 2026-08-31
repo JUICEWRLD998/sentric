@@ -1,0 +1,54 @@
+.pulse {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.accent {
+  color: var(--violet-400);
+}
+.success {
+  color: var(--green-500);
+}
+.warning {
+  color: var(--amber-500);
+}
+.danger {
+  color: var(--red-500);
+}
+.neutral {
+  color: var(--neutral-400);
+}
+
+.coreWrap {
+  position: relative;
+  display: inline-flex;
+  width: 8px;
+  height: 8px;
+  flex: none;
+}
+
+.ring {
+  position: absolute;
+  inset: 0;
+  border-radius: var(--radius-full);
+  background: currentColor;
+}
+
+.dot {
+  position: relative;
+  display: block;
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full);
+  background: currentColor;
+  box-shadow: 0 0 8px currentColor;
+}
+
+.label {
+  font-family: var(--font-mono);
+  font-size: var(--fs-step--1);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
