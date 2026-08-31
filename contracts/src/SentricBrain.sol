@@ -512,6 +512,9 @@ contract SentricBrain is SomniaEventHandler, IAgentRequesterHandler {
 
     /// @notice Re-point the vault at a live market (owner/ops path — lets the
     ///         operator follow rolling windows without redeploying the vault).
+    /// @dev Grants the new pool a fresh escrow approval — the vault's
+    ///      allowance is per-pool, and placeBinaryOrder pulls collateral from
+    ///      the vault via transferFrom.
     function manualSetVenue(
         IBinaryPool pool_,
         IBinarySettlement settlement_,
@@ -520,6 +523,36 @@ contract SentricBrain is SomniaEventHandler, IAgentRequesterHandler {
     ) external onlyOwner {
         if (address(vault) == address(0)) revert NotConfigured();
         vault.setVenue(pool_, settlement_, collateral_, marketId_);
+        vault.approvePool(type(uint256).max);
+    }
+
+    /// @notice One-tx hedge: re-point the vault at a live window, approve its
+    ///         pool, size from the config knobs and place the BUY_NO order.
+    /// @param pool_         The live window's BinaryPool.
+    /// @param marketId_     Module marketId (record-keeping).
+    /// @param downPriceBps_ P(Down) implied by the live book (drives sizing +
+    ///                      the premium cap via downPriceBps).
+    /// @param yesPrice      YES-side price that crosses the book (raw 6-dec).
+    function manualHedgeNow(
+        IBinaryPool pool_,
+        bytes32 marketId_,
+        uint256 downPriceBps_,
+        uint256 yesPrice
+    ) external onlyOwner {
+        if (address(vault) == address(0)) revert NotConfigured();
+        if (downPriceBps_ >= 10_000) revert NotConfigured();
+        downPriceBps = downPriceBps_;
+        vault.setVenue(pool_, vault.settlement(), vault.collateral(), marketId_);
+        vault.approvePool(type(uint256).max);
+        uint256 downPrice = (downPriceBps * 1e18) / 10_000;
+        uint256 size = vault.sizeHedge(
+            exposureNotional, downPrice, maxPremiumPerWindow, expectedMoveBps
+        );
+        if (size == 0) return;
+        uint256 sizeWhole = size / 1e6;
+        if (sizeWhole == 0) return;
+        vault.placeHedge(sizeWhole, yesPrice);
+        emit HedgeExecuted(sizeWhole, yesPrice, 0);
     }
 
     // ---------------------------------------------------------------------

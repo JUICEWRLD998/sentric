@@ -428,12 +428,41 @@ contract SentricVaultTradeTest is Test {
         );
         assertEq(address(vault.pool()), address(pool2), "pool re-pointed");
         assertEq(vault.marketId(), bytes32("BTC-1M"), "market id updated");
+        // the re-point must grant the NEW pool escrow approval (per-pool allowance)
+        assertEq(usdc.allowance(address(vault), address(pool2)), type(uint256).max, "new pool approved");
+        assertEq(usdc.allowance(address(vault), address(pool)), type(uint256).max, "old pool allowance kept (setUp approval)");
     }
 
     function test_manual_set_venue_only_owner() public {
         vm.prank(makeAddr("stranger"));
         vm.expectRevert(SentricBrain.NotOwner.selector);
         brain.manualSetVenue(IBinaryPool(address(pool)), IBinarySettlement(address(settlement)), IERC20(address(usdc)), bytes32("x"));
+    }
+
+    function test_manual_hedge_now_repools_approves_and_places() public {
+        brain.setHedgeConfig(vault, ONE_MILLION_USDC, 100e6, 200, 4500);
+        MockBinaryPool pool2 = new MockBinaryPool();
+        // One tx: re-point + approve + size + place BUY_NO at the crossing price.
+        brain.manualHedgeNow(IBinaryPool(address(pool2)), bytes32("BTC-5M"), 4500, 550000);
+        assertEq(address(vault.pool()), address(pool2), "pool re-pointed");
+        assertEq(usdc.allowance(address(vault), address(pool2)), type(uint256).max, "pool approved");
+        MockBinaryPool.OrderCall memory c = pool2.getLastCall();
+        assertEq(c.kind, 2, "BUY_NO");
+        assertEq(c.price, 550000, "crossing yes price");
+        assertEq(c.quantity, 222_000_000, "qty raw (222 whole tokens)");
+        assertEq(brain.downPriceBps(), 4500, "down price updated");
+    }
+
+    function test_manual_hedge_now_guards_bad_down_price() public {
+        brain.setHedgeConfig(vault, ONE_MILLION_USDC, 100e6, 200, 4500);
+        vm.expectRevert(SentricBrain.NotConfigured.selector);
+        brain.manualHedgeNow(IBinaryPool(address(pool)), bytes32("x"), 10_000, 1);
+    }
+
+    function test_manual_hedge_now_only_owner() public {
+        vm.prank(makeAddr("stranger"));
+        vm.expectRevert(SentricBrain.NotOwner.selector);
+        brain.manualHedgeNow(IBinaryPool(address(pool)), bytes32("x"), 4500, 550000);
     }
 
     // ------------------------------------------------------------------

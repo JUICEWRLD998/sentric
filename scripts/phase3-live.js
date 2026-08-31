@@ -1,6 +1,15 @@
 // Phase 3 live milestone driver: hedge -> wait for settlement -> redeem.
 // Usage: node scripts/phase3-live.js <brain> <vault> [maxWaitSec]
 // Env (see .env): SOMNIA_RPC_URL, DEPLOYER_PRIVATE_KEY (brain/vault owner).
+const fs = require("fs");
+const path = require("path");
+try {
+  const envPath = path.join(__dirname, "..", ".env");
+  for (const line of fs.readFileSync(envPath, "utf8").split(/\r?\n/)) {
+    const m = line.match(/^([A-Z0-9_]+)=(.*)$/);
+    if (m && !process.env[m[1]]) process.env[m[1]] = m[2].replace(/^["']|["']$/g, "");
+  }
+} catch (e) {}
 // Flow:
 //   1. brain.manualHedge()  -> vault.placeHedge (BUY_NO market order on the
 //      configured BinaryPool). Prints the order tx + premium.
