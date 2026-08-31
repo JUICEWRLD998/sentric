@@ -5,7 +5,7 @@ import {SomniaEventHandler} from "@somnia-chain/reactivity-contracts/SomniaEvent
 import {SomniaExtensions} from "@somnia-chain/reactivity-contracts/interfaces/SomniaExtensions.sol";
 import {ISomniaReactivityPrecompile} from "@somnia-chain/reactivity-contracts/interfaces/ISomniaReactivityPrecompile.sol";
 import {AgentTypes, IAgentRequester, IAgentRequesterHandler, IAgentMethods} from "./lib/IAgentRequester.sol";
-import {IBinaryPool, IBinarySettlement, IERC20} from "./lib/IBinaryVenue.sol";
+import {IBinaryPool, IBinarySettlement, IBinaryMarket, IERC20} from "./lib/IBinaryVenue.sol";
 import {SentricVault} from "./SentricVault.sol";
 
 /// @title SentricBrain
@@ -67,6 +67,9 @@ contract SentricBrain is SomniaEventHandler, IAgentRequesterHandler {
     );
     event HedgeExecuted(uint256 size, uint256 yesPrice, uint8 confidence);
     event HedgeRedeemed(uint8 outcomeIdx, uint256 amount, uint256 collateralOut);
+    event PositionOpened(uint64 nonce, uint256 qtyRaw, address pool);
+    event HedgeExpired(uint64 nonce);
+    event StopLossEngaged(uint256 lossStreak);
     event Swept(address indexed owner, uint256 amount);
 
     // ---------------------------------------------------------------------
@@ -133,6 +136,15 @@ contract SentricBrain is SomniaEventHandler, IAgentRequesterHandler {
     uint256 public maxPremiumPerWindow; // 6-dec tUSDC units
     uint256 public expectedMoveBps = 200; // insure against a 2% adverse move
     uint256 public downPriceBps = 4500; // P(Down) = 45% (operator-set from the book)
+
+    /// @dev Phase 4: open-position tracking (auto-redeem) + stop-loss.
+    address public lastOrderPool;
+    uint64 public lastOrderNonce;
+    uint256 public lastOrderQtyRaw;
+    bool public positionOpen;
+    uint256 public lossStreak;
+    /// @dev Consecutive losing windows before hedging stops (resets on a win).
+    uint256 internal constant STOP_LOSS_STREAK = 3;
 
     // ---------------------------------------------------------------------
     // Constructor
@@ -288,6 +300,12 @@ contract SentricBrain is SomniaEventHandler, IAgentRequesterHandler {
         }
 
         emit TickObserved(block.number, block.timestamp);
+
+        // Phase 4: settle any open position from a previous window first
+        // (before a new cycle can place another order).
+        if (positionOpen) {
+            _tryRedeemPosition();
+        }
 
         // One decision cycle at a time; skip if one is in flight or unconfigured.
         if (state != State.Idle || !cycleEnabled()) return;
@@ -477,6 +495,14 @@ contract SentricBrain is SomniaEventHandler, IAgentRequesterHandler {
         if (address(vault) == address(0) || exposureNotional == 0 || maxPremiumPerWindow == 0) {
             return;
         }
+        // One unsettled position at a time: the next tick settles it first.
+        if (positionOpen) return;
+        // Stop-loss rail: after 3 consecutive losing windows, stop hedging
+        // until a win resets the streak (or the owner resets it manually).
+        if (lossStreak >= STOP_LOSS_STREAK) {
+            emit StopLossEngaged(lossStreak);
+            return;
+        }
         uint256 downPrice = (downPriceBps * 1e18) / 10_000; // bps -> 1e18
         uint256 size = vault.sizeHedge(
             exposureNotional,
@@ -489,7 +515,42 @@ contract SentricBrain is SomniaEventHandler, IAgentRequesterHandler {
         if (sizeWhole == 0) return;
         uint256 yesPrice = 1e6 - downPriceBps * 100; // P(Up) raw 6-dec (1 - P(Down))
         vault.placeHedge(sizeWhole, yesPrice);
+        _recordPosition();
         emit HedgeExecuted(sizeWhole, yesPrice, confidence);
+    }
+
+    /// @dev Record the just-placed order so the next tick can auto-redeem it.
+    function _recordPosition() internal {
+        lastOrderPool = address(vault.pool());
+        lastOrderNonce = vault.marketNonce();
+        lastOrderQtyRaw = vault.lastOrderQtyRaw();
+        positionOpen = true;
+        emit PositionOpened(lastOrderNonce, lastOrderQtyRaw, lastOrderPool);
+    }
+
+    /// @notice Settle an open position once its window has resolved (NO side).
+    /// @dev Runs at the top of each tick, before any new cycle/order. On a NO
+    ///      win it redeems through the vault (explicit pool + order-time nonce)
+    ///      and resets the loss streak; on a YES win the hedge expired
+    ///      (premium = insurance cost) and the streak advances.
+    function _tryRedeemPosition() internal {
+        if (lastOrderPool == address(0)) return;
+        address market = IBinaryPool(lastOrderPool).market();
+        if (market == address(0)) return;
+        if (!IBinaryMarket(market).isResolved()) return;
+        uint256[] memory nums = IBinaryMarket(market).payoutNumerators();
+        positionOpen = false;
+        if (nums.length >= 2 && nums[1] > 0) {
+            uint256 out = vault.redeemSettled(
+                IBinaryPool(lastOrderPool), 1, lastOrderQtyRaw, lastOrderNonce
+            );
+            lossStreak = 0;
+            emit HedgeRedeemed(1, lastOrderQtyRaw, out);
+        } else {
+            lossStreak++;
+            emit HedgeExpired(lastOrderNonce);
+            if (lossStreak >= STOP_LOSS_STREAK) emit StopLossEngaged(lossStreak);
+        }
     }
 
     /// @notice Manual override: the owner can trigger the sized hedge now
@@ -499,14 +560,18 @@ contract SentricBrain is SomniaEventHandler, IAgentRequesterHandler {
     }
 
     /// @notice Redeem a settled position through the vault (owner/ops path;
-    ///         Phase 4 automates redemption inside the decision cycle).
+    ///         Phase 4 auto-redeems on tick, this is the manual fallback).
+    /// @dev Uses the vault's CURRENT pool + market nonce — correct when no
+    ///      re-point/order happened since the position was opened.
     function manualRedeem(uint8 outcomeIdx, uint256 amount)
         external
         onlyOwner
         returns (uint256 out)
     {
         if (address(vault) == address(0)) revert NotConfigured();
-        out = vault.redeemSettled(outcomeIdx, amount);
+        out = vault.redeemSettled(
+            IBinaryPool(vault.pool()), outcomeIdx, amount, vault.marketNonce()
+        );
         emit HedgeRedeemed(outcomeIdx, amount, out);
     }
 
@@ -552,7 +617,13 @@ contract SentricBrain is SomniaEventHandler, IAgentRequesterHandler {
         uint256 sizeWhole = size / 1e6;
         if (sizeWhole == 0) return;
         vault.placeHedge(sizeWhole, yesPrice);
+        _recordPosition();
         emit HedgeExecuted(sizeWhole, yesPrice, 0);
+    }
+
+    /// @notice Reset the stop-loss streak (owner override after a regime change).
+    function resetLossStreak() external onlyOwner {
+        lossStreak = 0;
     }
 
     // ---------------------------------------------------------------------
@@ -591,9 +662,9 @@ contract SentricBrain is SomniaEventHandler, IAgentRequesterHandler {
             "You are SENTRIC, a portfolio insurance risk controller for a long BTC position. ",
             "Current BTC/USD price: $",
             _toDecimal(price, jsonDecimals, 2),
-            ". 24h change: ",
+            ". Recent change: ",
             _formatSignedBps(changeBps),
-            "%. Intraday range: ",
+            "%. Recent range: ",
             _formatSignedBps(volBps),
             "%. Decide whether to buy a Down Event Contract to hedge the position for the next 5 minutes. ",
             "HEDGE if downside risk is elevated (sharp drop or high volatility). ",

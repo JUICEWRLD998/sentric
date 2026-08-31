@@ -25,6 +25,9 @@ contract SentricVault {
     );
     event Redeemed(uint8 outcomeIdx, uint256 amount, uint256 collateralOut);
     event Withdraw(address indexed user, uint256 amount);
+    event Deposit(address indexed user, uint256 amount);
+    event Paused(bool isPaused);
+    event MaxDailyPremiumSet(uint256 maxDailyPremium);
     event VenueSet(address indexed pool, address indexed settlement, address indexed collateral);
     event MarketConfigSet(bytes32 marketId, uint64 marketExpiryNs);
     event MaxPremiumSet(uint256 maxPremiumPerWindow);
@@ -38,8 +41,12 @@ contract SentricVault {
     error NotConfigured();
     error ZeroPremium();
     error MaxPremiumExceeded();
+    error DailyPremiumExceeded();
     error InsufficientCollateral();
+    error ExceedsDeposit();
     error OrderFailed();
+    error Reentrancy();
+    error HedgePaused();
 
     // ---------------------------------------------------------------------
     // Constants
@@ -48,6 +55,8 @@ contract SentricVault {
     uint256 internal constant ONE_COLLATERAL = 1_000_000;
     /// @dev Epoch length on Somnia (~5 min) — premium guard resets each epoch.
     uint256 internal constant EPOCH_BLOCKS = 3000;
+    /// @dev Blocks per day on Somnia (~10 blocks/s) — daily premium budget.
+    uint256 internal constant DAY_BLOCKS = 864_000;
     /// @dev kind for BUY_NO (hedge leg).
     uint8 internal constant KIND_BUY_NO = 2;
     /// @dev orderType MARKET = ImmediateOrCancel (no resting remainder).
@@ -98,6 +107,30 @@ contract SentricVault {
     /// @notice Last placed order id.
     uint128 public lastOrderId;
 
+    /// @notice Raw quantity (outcome tokens, 1e6 = 1 token) of the last order —
+    ///         lets the brain redeem exactly what it placed.
+    uint256 public lastOrderQtyRaw;
+
+    /// @notice User deposits (6-dec tUSDC units) — the non-custodial principal
+    ///         each user can withdraw back (profits stay pooled for hedges).
+    mapping(address => uint256) public userDeposits;
+
+    /// @notice Hard premium cap per DAY (6-dec tUSDC units); 0 = unlimited.
+    uint256 public maxDailyPremium;
+
+    /// @notice Premium spent in the current day (block.number / DAY_BLOCKS).
+    uint256 public dailyPremiumSpent;
+
+    /// @notice Day (block.number / DAY_BLOCKS) the daily guard is tracking.
+    uint256 public dailyWindow;
+
+    /// @notice Circuit breaker: while paused, no NEW hedges (redeem stays open
+    ///         so settled funds are never stuck).
+    bool public paused;
+
+    /// @dev Re-entrancy lock (1 = free, 2 = in call).
+    uint256 private _locked = 1;
+
     // ---------------------------------------------------------------------
     // Constructor
     // ---------------------------------------------------------------------
@@ -110,6 +143,18 @@ contract SentricVault {
     // ---------------------------------------------------------------------
     modifier onlyOwner() {
         if (msg.sender != owner) revert NotOwner();
+        _;
+    }
+
+    modifier nonReentrant() {
+        if (_locked != 1) revert Reentrancy();
+        _locked = 2;
+        _;
+        _locked = 1;
+    }
+
+    modifier whenNotPaused() {
+        if (paused) revert HedgePaused();
         _;
     }
 
@@ -171,9 +216,45 @@ contract SentricVault {
         emit Disarm(msg.sender);
     }
 
-    /// @notice Withdraw the caller's available (non-hedged) balance.
-    function withdraw(uint256 /* amount */) external pure {
-        revert NothingToWithdraw();
+    /// @notice Deposit capital into the vault (non-custodial: the deposit is
+    ///         your withdrawable principal; hedge profits stay pooled).
+    function deposit(uint256 amount) external nonReentrant {
+        if (amount == 0) revert NothingToWithdraw();
+        collateral.transferFrom(msg.sender, address(this), amount);
+        userDeposits[msg.sender] += amount;
+        emit Deposit(msg.sender, amount);
+    }
+
+    /// @notice Withdraw deposited principal back. Never breaks the current
+    ///         window's hedge funding: requires the vault to keep at least
+    ///         `windowPremiumSpent` (the active window's premium) after the
+    ///         transfer.
+    function withdraw(uint256 amount) external nonReentrant {
+        if (amount == 0) revert NothingToWithdraw();
+        if (amount > userDeposits[msg.sender]) revert ExceedsDeposit();
+        if (collateral.balanceOf(address(this)) < amount + windowPremiumSpent) {
+            revert InsufficientCollateral();
+        }
+        userDeposits[msg.sender] -= amount;
+        collateral.transfer(msg.sender, amount);
+        emit Withdraw(msg.sender, amount);
+    }
+
+    /// @notice Circuit breaker — blocks NEW hedges while paused (owner = brain).
+    function pause() external onlyOwner {
+        paused = true;
+        emit Paused(true);
+    }
+
+    function unpause() external onlyOwner {
+        paused = false;
+        emit Paused(false);
+    }
+
+    /// @notice Hard cap on total premium per day (6-dec units); 0 = unlimited.
+    function setMaxDailyPremium(uint256 cap) external onlyOwner {
+        maxDailyPremium = cap;
+        emit MaxDailyPremiumSet(cap);
     }
 
     // ---------------------------------------------------------------------
@@ -189,6 +270,8 @@ contract SentricVault {
     function placeHedge(uint256 size, uint256 yesPrice)
         external
         onlyOwner
+        nonReentrant
+        whenNotPaused
         returns (uint128 orderId)
     {
         if (address(pool) == address(0) || address(collateral) == address(0)) {
@@ -200,6 +283,12 @@ contract SentricVault {
         if (epoch != windowEpoch) {
             windowEpoch = epoch;
             windowPremiumSpent = 0;
+        }
+
+        // Daily premium budget (per ~24h day).
+        if (block.number / DAY_BLOCKS != dailyWindow) {
+            dailyWindow = block.number / DAY_BLOCKS;
+            dailyPremiumSpent = 0;
         }
 
         // Align the price to the pool's tick grid (snap UP, cap at max) and the
@@ -220,6 +309,9 @@ contract SentricVault {
         uint256 premium = (qty * noPrice) / ONE_COLLATERAL;
         if (premium == 0) revert ZeroPremium();
         if (windowPremiumSpent + premium > maxPremiumPerWindow) revert MaxPremiumExceeded();
+        if (maxDailyPremium > 0 && dailyPremiumSpent + premium > maxDailyPremium) {
+            revert DailyPremiumExceeded();
+        }
         if (collateral.balanceOf(address(this)) < premium) revert InsufficientCollateral();
 
         (bool success, uint128 id) = pool.placeBinaryOrder{value: 0}(
@@ -236,28 +328,35 @@ contract SentricVault {
         if (!success) revert OrderFailed();
 
         windowPremiumSpent += premium;
+        dailyPremiumSpent += premium;
         marketNonce = pool.marketNonce();
         lastOrderId = id;
+        lastOrderQtyRaw = qty;
         emit HedgePlaced(msg.sender, false, yesPrice, qty, id);
         return id;
     }
 
     /// @notice Redeem a settled winning position.
+    /// @param pool_      The pool the position was placed on (explicit — the
+    ///                   vault may have been re-pointed since; outcome ids are
+    ///                   pool-specific).
     /// @param outcomeIdx 0 = YES (Up won), 1 = NO (Down won).
-    /// @param amount      Outcome tokens to burn (whole tokens).
+    /// @param amount      Outcome tokens to burn (raw units, 1e6 = 1 token).
+    /// @param nonce       Pool market nonce captured AT ORDER TIME.
     /// @return out        Collateral received (raw 6-dec units).
-    /// @dev outcomeId = (pool << 72) | (marketNonce << 8) | outcomeIdx — the
-    ///      nonce is captured at order time so the id targets OUR window even
-    ///      if the pool has since recycled.
-    function redeemSettled(uint8 outcomeIdx, uint256 amount)
+    /// @dev outcomeId = (pool << 72) | (nonce << 8) | outcomeIdx — the nonce is
+    ///      captured at order time so the id targets OUR window even if the
+    ///      pool has since recycled.
+    function redeemSettled(IBinaryPool pool_, uint8 outcomeIdx, uint256 amount, uint64 nonce)
         external
         onlyOwner
+        nonReentrant
         returns (uint256 out)
     {
         if (address(settlement) == address(0)) revert NotConfigured();
-        uint256 outcomeId =
-            (uint256(uint160(address(pool))) << 72) | (uint256(marketNonce) << 8) | outcomeIdx;
-        out = settlement.finalizeAndRedeem(address(pool), outcomeId, amount, address(this));
+        uint256 outcomeId = (uint256(uint160(address(pool_))) << 72)
+            | (uint256(nonce) << 8) | outcomeIdx;
+        out = settlement.finalizeAndRedeem(address(pool_), outcomeId, amount, address(this));
         emit Redeemed(outcomeIdx, amount, out);
     }
 

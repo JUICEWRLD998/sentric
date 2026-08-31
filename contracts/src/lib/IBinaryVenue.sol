@@ -42,6 +42,14 @@ interface IBinaryPool {
     function market() external view returns (address);
 }
 
+/// @notice BinaryMarket lifecycle reads — used by the brain to auto-redeem
+///         settled positions (isResolved / payoutNumerators verified live).
+interface IBinaryMarket {
+    function isResolved() external view returns (bool);
+
+    function payoutNumerators() external view returns (uint256[] memory);
+}
+
 /// @notice BinarySettlement singleton — direct redemption route (no operator
 ///         grants needed). outcomeId = (uint160(pool) << 72) | (nonce << 8) | idx
 ///         (idx 0 = YES, 1 = NO).
@@ -61,6 +69,7 @@ interface IBinarySettlement {
 interface IERC20 {
     function approve(address spender, uint256 amount) external returns (bool);
     function transfer(address to, uint256 amount) external returns (bool);
+    function transferFrom(address from, address to, uint256 amount) external returns (bool);
     function balanceOf(address account) external view returns (uint256);
 }
 

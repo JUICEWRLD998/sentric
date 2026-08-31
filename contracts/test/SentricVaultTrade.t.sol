@@ -106,8 +106,39 @@ contract MockBinaryPool {
         return nonce;
     }
 
-    function market() external pure returns (address) {
-        return address(0);
+    function market() external view returns (address) {
+        return mockMarket;
+    }
+
+    /// @dev Point the pool at a (mock) market contract for auto-redeem tests.
+    address public mockMarket;
+
+    function setMarket(address m) external {
+        mockMarket = m;
+    }
+}
+
+/// @dev Settable resolution state — stands in for BinaryMarket lifecycle reads.
+contract MockBinaryMarket {
+    bool public resolved;
+    uint256[] internal _nums;
+
+    function setResolved(bool r) external {
+        resolved = r;
+    }
+
+    function setPayout(uint256 yesNum, uint256 noNum) external {
+        delete _nums;
+        _nums.push(yesNum);
+        _nums.push(noNum);
+    }
+
+    function isResolved() external view returns (bool) {
+        return resolved;
+    }
+
+    function payoutNumerators() external view returns (uint256[] memory) {
+        return _nums;
     }
 }
 
@@ -253,6 +284,8 @@ contract SentricVaultTradeTest is Test {
     MockERC20 internal usdc;
     MockAgentPlatform2 internal platform;
     uint256 internal constant ONE_MILLION_USDC = 1_000_000e6;
+    /// @dev Running platform request-id counter across multi-cycle tests.
+    uint256 internal _reqSeq = 1;
 
     function setUp() public {
         pool = new MockBinaryPool();
@@ -378,8 +411,9 @@ contract SentricVaultTradeTest is Test {
     function test_redeemSettled_builds_outcome_id() public {
         vm.prank(address(brain));
         vault.placeHedge(1000, 550000);
+        uint64 nonce = vault.marketNonce(); // view read BEFORE the prank
         vm.prank(address(brain));
-        uint256 out = vault.redeemSettled(1, 500); // NO side won
+        uint256 out = vault.redeemSettled(IBinaryPool(address(pool)), 1, 500, nonce); // NO side won
         assertEq(out, 1, "collateral out");
         assertEq(settlement.lastPool(), address(pool), "pool");
         assertEq(settlement.lastAmount(), 500, "amount");
@@ -389,10 +423,20 @@ contract SentricVaultTradeTest is Test {
         assertEq(settlement.lastOutcomeId(), expected, "outcome id");
     }
 
+    function test_redeemSettled_explicit_nonce_targets_our_window() public {
+        vm.prank(address(brain));
+        vault.placeHedge(1000, 550000);
+        // Redeem with a nonce other than the one captured at order time.
+        vm.prank(address(brain));
+        vault.redeemSettled(IBinaryPool(address(pool)), 1, 500, 999);
+        uint256 expected = (uint256(uint160(address(pool))) << 72) | (uint256(999) << 8) | 1;
+        assertEq(settlement.lastOutcomeId(), expected, "nonce from the call, not storage");
+    }
+
     function test_redeemSettled_only_owner() public {
         vm.prank(makeAddr("stranger"));
         vm.expectRevert(SentricVault.NotOwner.selector);
-        vault.redeemSettled(1, 500);
+        vault.redeemSettled(IBinaryPool(address(pool)), 1, 500, 1);
     }
 
     // ------------------------------------------------------------------
@@ -512,6 +556,206 @@ contract SentricVaultTradeTest is Test {
         vm.prank(makeAddr("stranger"));
         vm.expectRevert(SentricBrain.NotOwner.selector);
         brain.manualHedge();
+    }
+
+    // ------------------------------------------------------------------
+    // Phase 4: deposits / withdrawals / pause / daily premium budget
+    // ------------------------------------------------------------------
+
+    function test_deposit_records_principal() public {
+        usdc.mint(address(this), 1_000e6);
+        usdc.approve(address(vault), 1_000e6);
+        vault.deposit(1_000e6);
+        assertEq(vault.userDeposits(address(this)), 1_000e6, "deposit recorded");
+        assertEq(usdc.balanceOf(address(vault)), ONE_MILLION_USDC + 1_000e6, "vault funded");
+    }
+
+    function test_withdraw_returns_principal() public {
+        usdc.mint(address(this), 1_000e6);
+        usdc.approve(address(vault), 1_000e6);
+        vault.deposit(1_000e6);
+        vault.withdraw(400e6);
+        assertEq(usdc.balanceOf(address(this)), 400e6, "partial withdrawal back");
+        assertEq(vault.userDeposits(address(this)), 600e6, "principal reduced");
+        vault.withdraw(600e6);
+        assertEq(vault.userDeposits(address(this)), 0, "fully withdrawn");
+        assertEq(usdc.balanceOf(address(this)), 1_000e6, "all principal back");
+    }
+
+    function test_withdraw_exceeds_deposit_reverts() public {
+        usdc.mint(address(this), 1_000e6);
+        usdc.approve(address(vault), 1_000e6);
+        vault.deposit(100e6);
+        vm.expectRevert(SentricVault.ExceedsDeposit.selector);
+        vault.withdraw(101e6);
+    }
+
+    function test_withdraw_blocked_by_window_premium() public {
+        // A small vault where the active window's premium actually binds.
+        SentricVault small = new SentricVault();
+        small.setVenue(
+            IBinaryPool(address(pool)),
+            IBinarySettlement(address(settlement)),
+            IERC20(address(usdc)),
+            bytes32("BTC-SMALL")
+        );
+        small.setMaxPremiumPerWindow(1e30);
+        small.transferOwnership(address(brain));
+        usdc.mint(address(this), 1_000e6); // the deposit alone funds the vault
+        usdc.approve(address(small), 1_000e6);
+        small.deposit(1_000e6);
+        vm.prank(address(brain));
+        small.placeHedge(1000, 550000); // premium 450 USDC -> balance 550e6
+        // Withdrawing 600e6 would leave < the active window's premium.
+        vm.expectRevert(SentricVault.InsufficientCollateral.selector);
+        small.withdraw(600e6);
+        // 100e6 leaves enough room: 1000e6 - 100e6 = 900e6 >= premium 450e6.
+        small.withdraw(100e6);
+        assertEq(usdc.balanceOf(address(small)), 900e6, "premium room preserved");
+    }
+
+    function test_pause_blocks_new_hedges_only() public {
+        vm.prank(address(brain));
+        vault.pause();
+        assertTrue(vault.paused(), "paused");
+        vm.prank(address(brain));
+        vm.expectRevert(SentricVault.HedgePaused.selector);
+        vault.placeHedge(1000, 550000);
+        vm.prank(address(brain));
+        vault.unpause();
+        vm.prank(address(brain));
+        vault.placeHedge(1000, 550000); // works again
+    }
+
+    function test_pause_only_owner() public {
+        vm.prank(makeAddr("stranger"));
+        vm.expectRevert(SentricVault.NotOwner.selector);
+        vault.pause();
+    }
+
+    function test_daily_premium_budget_binds() public {
+        vm.prank(address(brain));
+        vault.setMaxPremiumPerWindow(1e30); // per-window cap won't trip
+        vm.prank(address(brain));
+        vault.setMaxDailyPremium(100e6); // 100 USDC/day
+        vm.prank(address(brain));
+        vm.expectRevert(SentricVault.DailyPremiumExceeded.selector);
+        vault.placeHedge(1000, 550000); // premium 450e6 > 100e6
+    }
+
+    function test_daily_premium_budget_resets_next_day() public {
+        vm.prank(address(brain));
+        vault.setMaxPremiumPerWindow(1e30);
+        vm.prank(address(brain));
+        vault.setMaxDailyPremium(1_000e6);
+        vm.prank(address(brain));
+        vault.placeHedge(1000, 550000); // premium 450e6 <= 1000e6
+        assertEq(vault.dailyPremiumSpent(), 450_000_000, "daily spent");
+        vm.roll(block.number + 864_000); // next day
+        vm.prank(address(brain));
+        vault.placeHedge(1000, 550000);
+        assertEq(vault.dailyPremiumSpent(), 450_000_000, "daily guard reset");
+    }
+
+    // ------------------------------------------------------------------
+    // Phase 4: autonomous loop — auto-redeem + stop-loss rails
+    // ------------------------------------------------------------------
+
+    /// @dev One full decision cycle ending in `decision` (request ids advance
+    ///      across cycles: fetch, action, confidence).
+    function _finalizeCycle(string memory decision) internal {
+        platform.finalize(_reqSeq++, AgentTypes.ResponseStatus.Success, abi.encode(_candle(100000, 101000)));
+        platform.finalize(_reqSeq++, AgentTypes.ResponseStatus.Success, abi.encode(decision));
+        platform.finalize(_reqSeq++, AgentTypes.ResponseStatus.Success, abi.encode(int256(90)));
+    }
+
+    function test_auto_redeem_no_win() public {
+        brain.setHedgeConfig(vault, ONE_MILLION_USDC, 100e6, 200, 4500);
+        MockBinaryMarket mkt = new MockBinaryMarket();
+        pool.setMarket(address(mkt));
+
+        _fireTick();
+        _finalizeCycle("HEDGE");
+        assertTrue(brain.positionOpen(), "position open after HEDGE");
+        assertEq(brain.lastOrderNonce(), 1, "order nonce recorded");
+        assertEq(brain.lastOrderQtyRaw(), 222_000_000, "qty recorded");
+        assertEq(brain.lastOrderPool(), address(pool), "pool recorded");
+
+        // Window settles with a NO win -> the next tick auto-redeems.
+        mkt.setResolved(true);
+        mkt.setPayout(0, 10_000_000);
+        _fireTick();
+
+        assertFalse(brain.positionOpen(), "position closed");
+        assertEq(brain.lossStreak(), 0, "streak reset on a win");
+        assertEq(settlement.lastPool(), address(pool), "redeem pool");
+        assertEq(settlement.lastAmount(), 222_000_000, "redeem qty");
+        assertEq(settlement.lastOutcomeId() & 0xff, 1, "NO outcome idx");
+    }
+
+    function test_auto_redeem_yes_win_expires_and_advances_streak() public {
+        brain.setHedgeConfig(vault, ONE_MILLION_USDC, 100e6, 200, 4500);
+        MockBinaryMarket mkt = new MockBinaryMarket();
+        pool.setMarket(address(mkt));
+
+        _fireTick();
+        _finalizeCycle("HEDGE");
+        assertTrue(brain.positionOpen(), "position open");
+
+        mkt.setResolved(true);
+        mkt.setPayout(10_000_000, 0); // YES wins: hedge expired worthless
+        _fireTick();
+
+        assertFalse(brain.positionOpen(), "position closed");
+        assertEq(brain.lossStreak(), 1, "streak advanced");
+        assertEq(settlement.lastAmount(), 0, "no redeem on a loss");
+    }
+
+    function test_second_hedge_blocked_while_position_open() public {
+        brain.setHedgeConfig(vault, ONE_MILLION_USDC, 100e6, 200, 4500);
+        _fireTick();
+        _finalizeCycle("HEDGE");
+        assertTrue(brain.positionOpen(), "position open");
+        // Next tick: old window not resolved yet -> position stays open and the
+        // cycle's HEDGE must NOT stack a second order.
+        _fireTick();
+        _finalizeCycle("HEDGE");
+        assertEq(pool.lastOrderId(), 1, "only one order - one position at a time");
+        assertTrue(brain.positionOpen(), "position still open");
+    }
+
+    function test_stop_loss_halts_hedging_after_3_losses() public {
+        brain.setHedgeConfig(vault, ONE_MILLION_USDC, 100e6, 200, 4500);
+        MockBinaryMarket mkt = new MockBinaryMarket();
+        pool.setMarket(address(mkt));
+
+        for (uint256 i = 0; i < 3; i++) {
+            _fireTick();
+            _finalizeCycle("HEDGE");
+            mkt.setResolved(true);
+            mkt.setPayout(10_000_000, 0); // YES wins: premium = insurance cost
+            _fireTick();
+        }
+        assertEq(brain.lossStreak(), 3, "three consecutive losses");
+        // The next HEDGE decision is skipped by the stop-loss rail.
+        _fireTick();
+        _finalizeCycle("HEDGE");
+        assertEq(pool.lastOrderId(), 3, "no 4th order - stop-loss engaged");
+        assertEq(brain.lossStreak(), 3, "streak unchanged");
+    }
+
+    function test_reset_loss_streak_owner() public {
+        brain.setHedgeConfig(vault, ONE_MILLION_USDC, 100e6, 200, 4500);
+        MockBinaryMarket mkt = new MockBinaryMarket();
+        pool.setMarket(address(mkt));
+        _fireTick();
+        _finalizeCycle("HEDGE");
+        mkt.setResolved(true);
+        mkt.setPayout(10_000_000, 0);
+        _fireTick();
+        assertEq(brain.lossStreak(), 1, "one loss");
+        brain.resetLossStreak();
+        assertEq(brain.lossStreak(), 0, "owner reset");
     }
 
     // ------------------------------------------------------------------
