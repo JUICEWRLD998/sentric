@@ -9,7 +9,7 @@
 .mark {
   display: inline-flex;
   color: var(--accent);
-  filter: drop-shadow(0 0 10px oklch(0.62 0.19 285 / 0.5));
+  filter: drop-shadow(0 0 10px oklch(0.75 0.17 168 / 0.45));
 }
 
 .svg {

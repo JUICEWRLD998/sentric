@@ -6,8 +6,8 @@
   align-items: center;
   gap: var(--space-4);
   padding: var(--space-3) var(--space-5);
-  background: color-mix(in oklch, var(--surface-0) 82%, transparent);
-  backdrop-filter: blur(var(--blur-md));
+  background: color-mix(in oklch, var(--surface-0) 94%, transparent);
+  backdrop-filter: blur(var(--blur-sm));
   border-bottom: 1px solid var(--border-subtle);
 }
 
@@ -20,6 +20,7 @@
 
 .link {
   padding: var(--space-1) var(--space-3);
+  border: 1px solid transparent;
   border-radius: var(--radius-full);
   font-size: var(--fs-step--1);
   color: var(--text-secondary);
@@ -34,8 +35,9 @@
 
 .active,
 .active:hover {
-  color: var(--accent);
+  color: var(--signal-300);
   background: var(--accent-muted);
+  border: 1px solid color-mix(in oklch, var(--signal-400) 30%, transparent);
 }
 
 .right {

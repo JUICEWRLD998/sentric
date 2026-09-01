@@ -356,6 +356,14 @@ app. On-chain autonomy is the whole point — everything else dilutes it.
 
 ## 7. UI / DESIGN SYSTEM (Noviq UI Playbook + the animation constraint)
 
+> **SUPERSEDED in Phase 6 (2026-09-01):** the shipped UI is now the custom
+> **"SIGNAL DECK"** system — deep blue-black ink (hue 255), FLAT layered surfaces (no
+> glassmorphism/blur), a single **mint-teal signal accent** (hue 168, `--signal-*`,
+> kept under legacy `--violet-*` names for compatibility), off-white text, per-theme
+> semantic color scales (dark-vivid vs light-darker), Space Grotesk display type, and
+> the light/dark toggle. The Noviq rules below are the historical Phase-5 basis; the
+> Framer-Motion-only constraint is unchanged.
+
 **Source file:** `C:\Users\fadhm\Desktop\UI-DESIGN-SYSTEM.md` (Noviq UI Playbook).
 
 **Constraint (explicit from the user):** No animation except **Framer Motion**. This means:
@@ -614,7 +622,8 @@ somnia/
 - **Per-surface polish via 3 parallel subagents** (landing / dashboard / reason-explorer, disjoint file sets): landing hero CTA hover/press states + two-segment Up/Down odds bar + "proven facts" strip (71/71 forge tests · 100% on-chain · ~5 min self-wake); dashboard accent-tinted arm panel + hairline KPI grid + light-mode-safe meters/odds + zebra hedge table + wallet-not-connected hints; reason-explorer decision tally (live counts), confidence progress bars (decision-keyed), `AnimatePresence` raw-receipt expand, focus rings. Framer Motion only; zero new dependencies.
 - **Docs:** README fully rewritten (AI-judge-facing: problem → insight → architecture → safety rails → deployed contracts → explicit map to the 5 judging criteria); `test.md` finished (§7 verification commands, §8 proven-on-testnet receipts); `.env.example` documents the `NEXT_PUBLIC_*` frontend overrides.
 - **Verified:** `forge test` 71/71 · `tsc --noEmit` 0 errors · `eslint` 0 problems · `next build` green (7/7 static pages) · prod-server smoke test: `/`, `/dashboard`, `/reason-explorer`, `/styleguide` all HTTP 200.
-- **Remaining for submission:** arm the v4 brain (needs ~1 STT — deployer holds 31.17 vs 32 required) so the dashboard/reason-explorer stream live autonomous receipts; record the 2–3 min demo (`demo.md` runbook + voiceover); submit on DoraHacks before **2026-09-08 18:00 UTC**.
+- **Brain v4 ARMED (2026-09-01):** owner topped up via the faucet key (+4 STT), `arm()` sent with 33 STT msg.value — tx `0xa345cb67…`, subscription **15252347**, `isSubscribed=true`, brain holds 33 STT. Price feed switched from the stale 1D candle to the **5m candle** (`setJsonParams`, tx `0xd497dd81…`). First live AuditEvent landed ~3 min after arming (block 476859017, HOLD, BTC) — the autonomous loop now streams live receipts to the dashboard/reason-explorer.
+- **Remaining for submission:** record the 2–3 min demo (`demo.md` runbook + voiceover) against the now-live autonomous loop; optional deck; submit on DoraHacks before **2026-09-08 18:00 UTC**. Note: `arm()` is `payable onlyOwner` and needs 33 STT msg.value — the dashboard now preflights owner + balance so the switch can't silently fail.
 
 ### Confirmed (no longer TODO)
 - Testnet: chain id 50312, RPC https://api.infra.testnet.somnia.network, faucet https://testnet.somnia.network.

@@ -1,171 +1,211 @@
 /* ============================================================
-   Noviq UI — tokens.css  (Tier 1 primitives → Tier 2 semantic
-   roles → Tier 3 component tokens). Dark-first. OKLCH only.
-   Copy these values verbatim from the Noviq UI Playbook §2.
+   SENTRIC "SIGNAL DECK" — tokens.css
+   A custom design system: deep blue-black ink, flat layered
+   surfaces, ONE mint-teal "signal" accent (protection = green),
+   off-white text, per-theme semantic color scales.
+   Architecture: Tier 1 primitives -> Tier 2 semantic -> Tier 3
+   component tokens. Dark-first; light overrides Tier 2 (+status
+   primitives re-tuned per theme, see bottom).
    ============================================================ */
 
-/* ---- Tier 1 · Color primitives (OKLCH) ---- */
+/* ---- Tier 1 · Neutral ramp (cool blue-black, hue 255) ---- */
 :root {
-  /* Neutral ramp — cool hue 265, faint chroma. Dark (990) → light (50). NO #000/#fff. */
-  --neutral-990: oklch(0.14 0.018 265);
-  --neutral-950: oklch(0.16 0.02 265);
-  --neutral-900: oklch(0.19 0.02 265);
-  --neutral-850: oklch(0.22 0.021 265);
-  --neutral-800: oklch(0.26 0.022 265);
-  --neutral-700: oklch(0.32 0.023 265);
-  --neutral-600: oklch(0.44 0.023 265);
-  --neutral-500: oklch(0.56 0.022 265);
-  --neutral-400: oklch(0.68 0.02 265);
-  --neutral-300: oklch(0.78 0.016 265);
-  --neutral-200: oklch(0.86 0.013 265);
-  --neutral-100: oklch(0.92 0.011 265);
-  --neutral-50:  oklch(0.96 0.01 265);
+  --neutral-990: oklch(0.125 0.012 255); /* page ink          */
+  --neutral-950: oklch(0.148 0.014 255); /* card               */
+  --neutral-900: oklch(0.172 0.015 255); /* raised             */
+  --neutral-850: oklch(0.20 0.016 255);  /* hover              */
+  --neutral-800: oklch(0.235 0.017 255); /* inset / well       */
+  --neutral-700: oklch(0.30 0.017 255);  /* strong border      */
+  --neutral-600: oklch(0.43 0.015 255);  /* faint-ish          */
+  --neutral-500: oklch(0.56 0.013 255);  /* faint text         */
+  --neutral-400: oklch(0.67 0.012 255);  /* muted text         */
+  --neutral-300: oklch(0.78 0.01 255);   /* secondary text     */
+  --neutral-200: oklch(0.87 0.008 255);  /* primary (soft)     */
+  --neutral-100: oklch(0.93 0.007 255);  /* primary (bright)   */
+  --neutral-50:  oklch(0.965 0.006 255); /* brightest          */
 
-  /* Brand accent — electric indigo/violet, hue 285. Pick ONE hue and commit. */
-  --violet-200: oklch(0.86 0.07 285);
-  --violet-300: oklch(0.78 0.12 285);
-  --violet-400: oklch(0.70 0.16 285);
-  --violet-500: oklch(0.62 0.19 285);
-  --violet-600: oklch(0.55 0.19 285);
-  --violet-700: oklch(0.47 0.17 285);
+  /* ---- Tier 1 · Signal ramp (mint-teal, hue 168) ----
+     The ONE brand accent: electric mint. Kept under the legacy
+     --violet-* names so existing components keep working; use
+     --signal-* in new code. */
+  --signal-200: oklch(0.92 0.06 168);
+  --signal-300: oklch(0.87 0.10 168);
+  --signal-400: oklch(0.81 0.14 168);
+  --signal-500: oklch(0.75 0.17 168); /* primary signal */
+  --signal-600: oklch(0.65 0.16 168);
+  --signal-700: oklch(0.55 0.14 168);
 
-  --red-300: oklch(0.75 0.14 27);  --red-400: oklch(0.68 0.19 27);
-  --red-500: oklch(0.62 0.22 27);  --red-600: oklch(0.54 0.21 27);
-  --green-300: oklch(0.82 0.12 155); --green-400: oklch(0.75 0.15 155);
-  --green-500: oklch(0.68 0.16 155); --green-600: oklch(0.60 0.15 155);
-  --amber-400: oklch(0.82 0.14 75);  --amber-500: oklch(0.76 0.16 75);
+  --violet-200: var(--signal-200);
+  --violet-300: var(--signal-300);
+  --violet-400: var(--signal-400);
+  --violet-500: var(--signal-500);
+  --violet-600: var(--signal-600);
+  --violet-700: var(--signal-700);
+
+  /* ---- Tier 1 · Status (tuned vivid for dark) ---- */
+  --red-300: oklch(0.78 0.13 25);   --red-400: oklch(0.72 0.18 25);
+  --red-500: oklch(0.66 0.19 25);   --red-600: oklch(0.58 0.17 25);
+  --green-300: oklch(0.86 0.11 155); --green-400: oklch(0.79 0.14 155);
+  --green-500: oklch(0.72 0.16 155); --green-600: oklch(0.63 0.15 155);
+  --amber-400: oklch(0.83 0.14 80);  --amber-500: oklch(0.77 0.15 80);
 }
 
-/* ---- Tier 1 · Spacing, type, radii, shadows, motion primitives ---- */
+/* ---- Tier 1 · Spacing, type, radii, shadows, motion ---- */
 :root {
-  /* Spacing — 4px base, 8px rhythm */
   --space-1:.25rem; --space-2:.5rem; --space-3:.75rem; --space-4:1rem;
   --space-5:1.5rem; --space-6:2rem; --space-7:3rem; --space-8:4rem;
   --space-9:6rem;  --space-10:8rem;
 
-  /* Fluid type — clamp(min, preferred, max), modular ~1.24 */
-  --fs-step--1: clamp(0.8rem, 0.76rem + 0.2vw, 0.9rem);   /* caption */
-  --fs-step-0:  clamp(0.95rem, 0.9rem + 0.25vw, 1.05rem); /* body    */
+  --fs-step--1: clamp(0.78rem, 0.74rem + 0.2vw, 0.88rem);
+  --fs-step-0:  clamp(0.95rem, 0.9rem + 0.25vw, 1.05rem);
   --fs-step-1:  clamp(1.1rem, 1rem + 0.45vw, 1.32rem);
-  --fs-step-2:  clamp(1.32rem, 1.16rem + 0.72vw, 1.72rem);
-  --fs-step-3:  clamp(1.6rem, 1.36rem + 1.1vw, 2.2rem);
-  --fs-step-4:  clamp(1.95rem, 1.56rem + 1.9vw, 3rem);
-  --fs-step-5:  clamp(2.4rem, 1.8rem + 3vw, 4rem);
-  --fs-step-6:  clamp(3rem, 2rem + 4.8vw, 5.5rem);         /* display hero */
+  --fs-step-2:  clamp(1.35rem, 1.18rem + 0.72vw, 1.75rem);
+  --fs-step-3:  clamp(1.65rem, 1.4rem + 1.1vw, 2.3rem);
+  --fs-step-4:  clamp(2rem, 1.6rem + 1.9vw, 3.1rem);
+  --fs-step-5:  clamp(2.5rem, 1.85rem + 3vw, 4.2rem);
+  --fs-step-6:  clamp(3.1rem, 2.1rem + 4.8vw, 5.9rem);
 
-  --lh-tight:1.05; --lh-snug:1.2; --lh-normal:1.55;
-  --tracking-tight:-0.02em; --tracking-wide:0.08em;
+  --lh-tight:1.02; --lh-snug:1.15; --lh-normal:1.5;
+  --tracking-tight:-0.025em; --tracking-wide:0.08em;
   --weight-regular:400; --weight-medium:500; --weight-semibold:600; --weight-bold:700;
 
-  /* Three font roles (next/font or @font-face supply the -src vars) */
   --font-display: var(--font-display-src,"Space Grotesk"), ui-sans-serif, system-ui, sans-serif;
   --font-sans:    var(--font-sans-src,"Geist"), ui-sans-serif, system-ui, -apple-system, sans-serif;
   --font-mono:    var(--font-mono-src,"Geist Mono"), ui-monospace, "SFMono-Regular", monospace;
 
   --radius-xs:4px; --radius-sm:8px; --radius-md:12px; --radius-lg:16px;
-  --radius-xl:24px; --radius-2xl:32px; --radius-full:9999px;
+  --radius-xl:20px; --radius-2xl:28px; --radius-full:9999px;
 
-  /* Tinted, layered shadows + accent glow */
-  --shadow-1: 0 1px 2px  oklch(0.10 0.02 265 / 0.40);
-  --shadow-2: 0 4px 12px oklch(0.10 0.02 265 / 0.42);
-  --shadow-3: 0 12px 32px oklch(0.08 0.02 265 / 0.48);
-  --shadow-4: 0 24px 64px oklch(0.06 0.02 265 / 0.55);
-  --shadow-accent-glow: 0 0 28px oklch(0.62 0.19 285 / 0.40);
-  --shadow-danger-glow: 0 0 28px oklch(0.62 0.22 27 / 0.40);
+  /* Flat-surfaces era: elevation comes from surface steps +
+     hairline borders; shadows are barely-there definition. */
+  --shadow-1: 0 1px 2px oklch(0.05 0.01 255 / 0.45);
+  --shadow-2: 0 1px 2px oklch(0.05 0.01 255 / 0.45), 0 4px 14px oklch(0.05 0.01 255 / 0.28);
+  --shadow-3: 0 2px 4px oklch(0.05 0.01 255 / 0.5), 0 14px 40px oklch(0.04 0.01 255 / 0.42);
+  --shadow-4: 0 2px 6px oklch(0.04 0.01 255 / 0.55), 0 28px 72px oklch(0.03 0.01 255 / 0.5);
+  --shadow-accent-glow: 0 0 24px oklch(0.75 0.17 168 / 0.28);
+  --shadow-danger-glow: 0 0 24px oklch(0.66 0.19 25 / 0.28);
 
   --blur-sm:8px; --blur-md:16px; --blur-lg:28px;
   --z-base:0; --z-raised:10; --z-dropdown:100; --z-sticky:200;
   --z-overlay:300; --z-modal:400; --z-toast:500;
 }
 
-/* ---- Tier 2 · Semantic roles (dark-first defaults) ---- */
+/* ---- Tier 2 · Semantic roles (dark defaults) ---- */
 :root {
-  --surface-0: var(--neutral-990); --surface-1: var(--neutral-950);
-  --surface-2: var(--neutral-900); --surface-3: var(--neutral-850);
+  --surface-0: var(--neutral-990);
+  --surface-1: var(--neutral-950);
+  --surface-2: var(--neutral-900);
+  --surface-3: var(--neutral-850);
   --surface-inset: var(--neutral-800);
 
-  --text-primary: var(--neutral-50);  --text-secondary: var(--neutral-300);
-  --text-muted:   var(--neutral-400); --text-faint: var(--neutral-500);
+  /* Off-white text — avoid pure white halo on OLED/ink. */
+  --text-primary: var(--neutral-100);
+  --text-secondary: var(--neutral-300);
+  --text-muted: var(--neutral-400);
+  --text-faint: var(--neutral-500);
   --text-inverse: var(--neutral-990);
 
-  --border-subtle: oklch(0.32 0.02 265 / 0.55);
-  --border-strong: oklch(0.44 0.023 265 / 0.80);
+  --border-subtle: oklch(0.55 0.013 255 / 0.22);
+  --border-strong: oklch(0.70 0.012 255 / 0.38);
 
-  --accent: var(--violet-500); --accent-hover: var(--violet-400);
-  --accent-active: var(--violet-600); --accent-muted: oklch(0.62 0.19 285 / 0.16);
-  --accent-contrast: var(--neutral-50);
+  --accent: var(--signal-500);
+  --accent-hover: var(--signal-400);
+  --accent-active: var(--signal-600);
+  --accent-muted: oklch(0.75 0.17 168 / 0.13);
+  --accent-contrast: var(--neutral-990); /* dark ink on bright mint */
 
-  --danger: var(--red-500);  --danger-muted: oklch(0.62 0.22 27 / 0.16);
-  --success: var(--green-500); --success-muted: oklch(0.68 0.16 155 / 0.16);
-  --warning: var(--amber-500); --warning-muted: oklch(0.76 0.16 75 / 0.16);
+  --danger: var(--red-500);  --danger-muted: oklch(0.66 0.19 25 / 0.15);
+  --success: var(--green-500); --success-muted: oklch(0.72 0.16 155 / 0.15);
+  --warning: var(--amber-500); --warning-muted: oklch(0.77 0.15 80 / 0.15);
 
-  --ring: var(--violet-400);
-  --glass-bg: oklch(0.22 0.021 265 / 0.55);
-  --glass-border: oklch(0.72 0.06 285 / 0.16);
-  --glass-highlight: oklch(0.92 0.02 265 / 0.09);
-  --link: var(--violet-300); --link-hover: var(--violet-200);
+  --ring: var(--signal-400);
+
+  /* Glass tokens keep their names but now describe the FLAT
+     surface treatment (edge highlight carries the signal tint). */
+  --glass-bg: var(--surface-1);
+  --glass-border: var(--border-subtle);
+  --glass-highlight: oklch(0.87 0.08 168 / 0.14);
+
+  --link: var(--signal-300);
+  --link-hover: var(--signal-200);
 }
 
-/* ---- Tier 3 · Component tokens (components reference ONLY these) ---- */
+/* ---- Tier 3 · Component tokens ---- */
 :root {
-  --card-bg: var(--surface-2); --card-border: var(--border-subtle);
-  --card-radius: var(--radius-lg); --card-padding: var(--space-6); --card-shadow: var(--shadow-2);
+  --card-bg: var(--surface-1);
+  --card-border: var(--border-subtle);
+  --card-radius: var(--radius-lg);
+  --card-padding: var(--space-5);
+  --card-shadow: var(--shadow-2);
 
-  --btn-accent-bg: var(--accent); --btn-accent-bg-hover: var(--accent-hover);
-  --btn-accent-bg-active: var(--accent-active); --btn-accent-fg: var(--accent-contrast);
-  --btn-radius: var(--radius-sm); --btn-padding-y: var(--space-2); --btn-padding-x: var(--space-4);
+  --btn-accent-bg: var(--accent);
+  --btn-accent-bg-hover: var(--accent-hover);
+  --btn-accent-bg-active: var(--accent-active);
+  --btn-accent-fg: var(--accent-contrast);
+  --btn-radius: var(--radius-md);
+  --btn-padding-y: var(--space-2);
+  --btn-padding-x: var(--space-4);
 
-  --input-bg: var(--surface-1); --input-border: var(--border-subtle);
-  --input-border-focus: var(--accent); --input-radius: var(--radius-sm);
+  --input-bg: var(--surface-1);
+  --input-border: var(--border-subtle);
+  --input-border-focus: var(--accent);
+  --input-radius: var(--radius-sm);
 
-  --code-bg: var(--surface-0); --code-fg: var(--neutral-200); --code-radius: var(--radius-sm);
+  --code-bg: var(--neutral-990);
+  --code-fg: var(--neutral-200);
+  --code-radius: var(--radius-sm);
 }
 
-/* ---- Light theme = override Tier 2 only (never Tier 1 or Tier 3) ---- */
+/* ============================================================
+   Light theme — Tier 2 override + status primitives re-tuned
+   (same semantic meaning, darker optical weight on paper).
+   ============================================================ */
 [data-theme="light"] {
-  /* surfaces — tinted, no pure white */
-  --surface-0: oklch(0.98 0.006 265);
-  --surface-1: oklch(0.96 0.008 265);
-  --surface-2: oklch(0.99 0.005 265);
-  --surface-3: oklch(0.94 0.01 265);
-  --surface-inset: oklch(0.90 0.012 265);
+  --surface-0: oklch(0.985 0.003 255);
+  --surface-1: oklch(0.97 0.004 255);
+  --surface-2: oklch(0.995 0.002 255);
+  --surface-3: oklch(0.945 0.005 255);
+  --surface-inset: oklch(0.90 0.007 255);
 
-  /* text — darker ink on light */
   --text-primary: var(--neutral-950);
   --text-secondary: var(--neutral-700);
   --text-muted: var(--neutral-600);
   --text-faint: var(--neutral-500);
   --text-inverse: var(--neutral-50);
 
-  /* borders — lighter, lower opacity */
-  --border-subtle: oklch(0.55 0.02 265 / 0.28);
-  --border-strong: oklch(0.45 0.02 265 / 0.55);
+  --border-subtle: oklch(0.45 0.012 255 / 0.28);
+  --border-strong: oklch(0.38 0.011 255 / 0.45);
 
-  /* accent — darker violet for contrast on light */
-  --accent: var(--violet-600);
-  --accent-hover: var(--violet-700);
-  --accent-active: var(--violet-500);
-  --accent-muted: oklch(0.55 0.19 285 / 0.14);
+  --accent: var(--signal-600);
+  --accent-hover: var(--signal-700);
+  --accent-active: var(--signal-500);
+  --accent-muted: oklch(0.65 0.16 168 / 0.13);
   --accent-contrast: var(--neutral-50);
 
-  --ring: var(--violet-500);
-  --link: var(--violet-600);
-  --link-hover: var(--violet-700);
+  --ring: var(--signal-600);
+  --link: var(--signal-600);
+  --link-hover: var(--signal-700);
 
-  /* glass — near-white translucent fill + faint edge highlight */
-  --glass-bg: oklch(0.98 0.005 265 / 0.72);
-  --glass-border: oklch(0.55 0.04 285 / 0.18);
-  --glass-highlight: oklch(0.98 0.005 265 / 0.75);
+  --glass-bg: var(--surface-1);
+  --glass-border: var(--border-subtle);
+  --glass-highlight: oklch(0.55 0.14 168 / 0.14);
 
-  /* shadows — lighter, softer */
-  --shadow-1: 0 1px 2px oklch(0.35 0.02 265 / 0.08);
-  --shadow-2: 0 4px 12px oklch(0.35 0.02 265 / 0.10);
-  --shadow-3: 0 12px 32px oklch(0.30 0.02 265 / 0.12);
-  --shadow-4: 0 24px 64px oklch(0.25 0.02 265 / 0.16);
-  --shadow-accent-glow: 0 0 28px oklch(0.55 0.19 285 / 0.30);
-  --shadow-danger-glow: 0 0 28px oklch(0.54 0.21 27 / 0.30);
+  --shadow-1: 0 1px 2px oklch(0.30 0.012 255 / 0.07);
+  --shadow-2: 0 1px 2px oklch(0.30 0.012 255 / 0.06), 0 4px 14px oklch(0.30 0.012 255 / 0.08);
+  --shadow-3: 0 2px 4px oklch(0.30 0.012 255 / 0.08), 0 14px 40px oklch(0.30 0.012 255 / 0.10);
+  --shadow-4: 0 2px 6px oklch(0.30 0.012 255 / 0.10), 0 28px 72px oklch(0.28 0.012 255 / 0.12);
+  --shadow-accent-glow: 0 0 24px oklch(0.65 0.16 168 / 0.22);
+  --shadow-danger-glow: 0 0 24px oklch(0.58 0.17 25 / 0.22);
 
-  /* code surfaces */
-  --code-bg: oklch(0.96 0.008 265);
+  --code-bg: oklch(0.955 0.004 255);
   --code-fg: var(--neutral-800);
+
+  /* Status primitives re-tuned for paper (darker, less neon). */
+  --red-400: oklch(0.68 0.16 25);  --red-500: oklch(0.60 0.17 25); --red-600: oklch(0.52 0.15 25);
+  --green-400: oklch(0.72 0.13 155); --green-500: oklch(0.62 0.14 155); --green-600: oklch(0.54 0.13 155);
+  --amber-400: oklch(0.76 0.13 80); --amber-500: oklch(0.68 0.14 80);
+  --signal-400: oklch(0.72 0.15 168); --signal-500: oklch(0.63 0.15 168); --signal-600: oklch(0.55 0.14 168);
+  --signal-700: oklch(0.46 0.13 168); --signal-300: oklch(0.78 0.12 168);
+  --violet-300: var(--signal-300); --violet-400: var(--signal-400);
+  --violet-500: var(--signal-500); --violet-600: var(--signal-600); --violet-700: var(--signal-700);
 }

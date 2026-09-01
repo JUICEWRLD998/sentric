@@ -90,7 +90,7 @@ svg {
 
 /* Quiet polish layer: selection, scrollbar, touch tap. */
 ::selection {
-  background: oklch(0.62 0.19 285 / 0.32);
+  background: oklch(0.75 0.17 168 / 0.30);
   color: var(--text-primary);
 }
 

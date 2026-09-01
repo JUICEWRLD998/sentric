@@ -1,61 +1,84 @@
 /* ============================================================
-   Noviq UI — patterns.module.css  (reusable surface patterns)
-   Copy verbatim from the Noviq UI Playbook §4, EXCEPT the mesh:
-   it is STATIC here — radial gradients kept, drift @keyframes
-   (meshDriftA/B) and the `animation` property removed.
+   SENTRIC "SIGNAL DECK" — patterns.module.css
+   Reusable surface patterns. Flat-surfaces era: no backdrop
+   blur; elevation = surface steps + hairline borders. The
+   signal accent appears only as edge highlights and glows.
    ============================================================ */
 
-/* 4.1 Glass card */
+/* 1. Flat card (the workhorse surface). */
 .glassCard {
-  position: relative; background: var(--glass-bg);
-  border: 1px solid var(--glass-border); border-radius: var(--card-radius);
-  box-shadow: var(--shadow-2); overflow: clip;
-  backdrop-filter: blur(var(--blur-md)) saturate(1.25);
-  -webkit-backdrop-filter: blur(var(--blur-md)) saturate(1.25);
-}
-/* Fallback where backdrop-filter is unsupported */
-@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-  .glassCard { background: var(--surface-2); }
+  position: relative;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--card-radius);
+  box-shadow: var(--card-shadow);
+  overflow: clip;
 }
 
-/* 4.2 Edge-light ring (1px gradient border via mask) */
+/* 2. Edge light — a 1px top-edge gradient in the signal hue. */
 .edgeLight { position: relative; }
 .edgeLight::before {
-  content:""; position:absolute; inset:0; border-radius:inherit; padding:1px; pointer-events:none;
-  background: linear-gradient(140deg, var(--glass-highlight) 0%, transparent 38%,
-              transparent 62%, oklch(0.72 0.08 285 / 0.22) 100%);
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  pointer-events: none;
+  background: linear-gradient(180deg, var(--glass-highlight) 0%, transparent 42%);
   -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-  -webkit-mask-composite: xor; mask-composite: exclude;
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
 }
 
-/* 4.3 Film grain (SVG noise, low opacity) */
+/* 3. Dot grid — a faint technical lattice (replaces film grain). */
 .filmGrain::after {
-  content:""; position:absolute; inset:0; z-index:var(--z-raised); pointer-events:none;
-  opacity:0.035; mix-blend-mode:overlay; background-size:140px 140px;
-  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: var(--z-raised);
+  pointer-events: none;
+  opacity: 0.5;
+  background-image: radial-gradient(oklch(0.8 0.02 255 / 0.16) 1px, transparent 1px);
+  background-size: 26px 26px;
 }
 
-/* 4.4 STATIC mesh gradient (two blurred blobs — no drift animation) */
-.mesh { position:absolute; inset:0; z-index:var(--z-base); overflow:hidden;
-        background-color:var(--surface-0); pointer-events:none; }
-.mesh::before,.mesh::after { content:""; position:absolute; inset:-30%;
-        will-change:transform; filter:blur(var(--blur-lg)); background-repeat:no-repeat; }
-.mesh::before { background-image:
-    radial-gradient(38% 42% at 22% 28%, oklch(0.62 0.19 285 / 0.40), transparent 70%),
-    radial-gradient(34% 38% at 78% 20%, oklch(0.55 0.19 285 / 0.28), transparent 70%); }
-.mesh::after  { background-image:
-    radial-gradient(40% 44% at 68% 78%, oklch(0.50 0.14 300 / 0.30), transparent 70%),
-    radial-gradient(30% 34% at 30% 82%, oklch(0.62 0.16 250 / 0.24), transparent 70%); }
+/* 4. Aurora — quiet static signal + blue blobs (no animation). */
+.mesh {
+  position: absolute;
+  inset: 0;
+  z-index: var(--z-base);
+  overflow: hidden;
+  background-color: var(--surface-0);
+  pointer-events: none;
+}
+.mesh::before,
+.mesh::after {
+  content: "";
+  position: absolute;
+  inset: -30%;
+  filter: blur(var(--blur-lg));
+  background-repeat: no-repeat;
+}
+.mesh::before {
+  background-image:
+    radial-gradient(38% 42% at 24% 22%, oklch(0.75 0.17 168 / 0.20), transparent 70%),
+    radial-gradient(34% 38% at 78% 16%, oklch(0.55 0.14 168 / 0.12), transparent 70%);
+}
+.mesh::after {
+  background-image:
+    radial-gradient(40% 44% at 70% 80%, oklch(0.30 0.05 230 / 0.30), transparent 70%),
+    radial-gradient(30% 34% at 26% 86%, oklch(0.35 0.06 210 / 0.22), transparent 70%);
+}
 
-/* 4.5 Ledger grid — faint 1px lattice for console / inspect surfaces (static). */
+/* 5. Ledger grid — faint 1px lattice for console / inspect surfaces. */
 .gridLines {
   background-image:
-    linear-gradient(to right, oklch(0.44 0.023 265 / 0.05) 1px, transparent 1px),
-    linear-gradient(to bottom, oklch(0.44 0.023 265 / 0.05) 1px, transparent 1px);
+    linear-gradient(to right, oklch(0.55 0.013 255 / 0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, oklch(0.55 0.013 255 / 0.05) 1px, transparent 1px);
   background-size: 32px 32px;
 }
 
-/* 4.6 Vignette — soft darkening toward the edges for depth (static). */
+/* 6. Vignette — soft ink toward the edges for depth. */
 .vignette {
-  background: radial-gradient(120% 100% at 50% 0%, transparent 50%, oklch(0.10 0.02 265 / 0.6) 100%);
+  background: radial-gradient(120% 100% at 50% 0%, transparent 55%, oklch(0.10 0.012 255 / 0.5) 100%);
 }

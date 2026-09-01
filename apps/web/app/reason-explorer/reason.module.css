@@ -8,6 +8,7 @@
   width: 100%;
 }
 
+/* ---- Controls: brain address field + version switch ---- */
 .controls {
   display: flex;
   align-items: flex-end;
@@ -23,28 +24,33 @@
   gap: var(--space-1);
   padding: var(--space-1);
   border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-sm);
-  background: var(--surface-1);
+  border-radius: var(--radius-md);
+  background: var(--surface-2);
 }
 
 .seg,
 .segActive {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px; /* touch target (spec) */
+  padding: var(--space-2) var(--space-3);
   border: 1px solid transparent;
+  border-radius: var(--radius-sm);
   background: transparent;
   color: var(--text-secondary);
   font-family: var(--font-mono);
   font-size: var(--fs-step--1);
   letter-spacing: var(--tracking-wide);
-  padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius-xs);
-  cursor: pointer;
   line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
   transition: var(--transition-colors);
 }
 
 .seg:hover {
   color: var(--text-primary);
-  background: var(--surface-2);
+  background: var(--surface-3);
 }
 
 .seg:focus-visible,
@@ -54,21 +60,21 @@
 }
 
 .segActive {
-  color: var(--text-primary);
-  border-color: var(--accent);
+  color: var(--accent);
   background: var(--accent-muted);
 }
 
-/* Decision tally — a summary header derived from the loaded receipts */
-.summary {
+.segActive:hover {
+  color: var(--accent-hover);
+}
+
+/* ---- Decision tally — a 3+1 stat row derived from the loaded receipts ---- */
+.summaryInner {
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
   gap: var(--space-4);
   flex-wrap: wrap;
-  padding: var(--space-4) var(--space-5);
-  border-bottom: 1px solid var(--border-subtle);
-  background-color: var(--surface-0);
 }
 
 .summaryHead {
@@ -85,16 +91,29 @@
   color: var(--text-faint);
 }
 
-.summaryTotal {
+.summaryLive {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
   font-family: var(--font-mono);
   font-size: var(--fs-step--1);
   color: var(--text-muted);
   font-variant-numeric: tabular-nums;
 }
 
+.liveDot {
+  width: var(--space-2);
+  height: var(--space-2);
+  border-radius: var(--radius-full);
+  background: var(--accent);
+}
+
 .tally {
   display: flex;
+  align-items: flex-end;
   gap: var(--space-5);
+  row-gap: var(--space-3);
+  flex-wrap: wrap;
   margin: 0;
 }
 
@@ -114,9 +133,9 @@
 
 .tallyValue {
   margin: 0;
-  font-family: var(--font-display);
-  font-size: var(--fs-step-2);
-  font-weight: var(--weight-bold);
+  font-family: var(--font-mono);
+  font-size: var(--fs-step-3);
+  font-weight: var(--weight-semibold);
   letter-spacing: var(--tracking-tight);
   line-height: var(--lh-tight);
   font-variant-numeric: tabular-nums;
@@ -126,15 +145,18 @@
 .tallySuccess { color: var(--success); }
 .tallyNeutral { color: var(--text-muted); }
 
-/* Chronological ledger — hairline separators, flat rows */
+.tallyTotalItem {
+  padding-left: var(--space-5);
+  border-left: 1px solid var(--border-subtle);
+}
+
+.tallyTotal { color: var(--accent); }
+
+/* ---- Ledger — one flat card per receipt, hairline-separated ---- */
 .ledger {
   display: flex;
   flex-direction: column;
-  border-top: 1px solid var(--border-strong);
-}
-
-.entry {
-  border-bottom: 1px solid var(--border-subtle);
+  gap: var(--space-3);
 }
 
 .entrySurface {
@@ -148,16 +170,17 @@
 }
 
 .entrySurface:hover {
-  background-color: var(--surface-2);
+  background-color: var(--surface-3);
 }
 
-/* Left accent rail keyed to the decision */
+/* Left accent rail — 2px, keyed to the decision (danger/success/muted) */
 .rail {
   position: absolute;
   top: 0;
   bottom: 0;
   left: 0;
-  width: var(--space-1);
+  width: 2px; /* spec: decision rail */
+  border-radius: var(--radius-xs) 0 0 var(--radius-xs);
 }
 
 .railDanger { background: var(--danger); }
@@ -177,7 +200,7 @@
   gap: var(--space-4);
 }
 
-/* Confidence — value + thin horizontal progress bar (0–100) */
+/* Confidence — value + thin 4px progress bar (0–100) */
 .confidence {
   display: flex;
   flex-direction: column;
@@ -210,7 +233,7 @@
 .confidenceTrack {
   display: block;
   width: 100%;
-  height: var(--space-1);
+  height: var(--space-1); /* 4px thin bar (spec) */
   background: var(--surface-inset);
   border-radius: var(--radius-full);
   overflow: hidden;
@@ -266,29 +289,38 @@
 }
 
 .expand {
-  align-self: flex-start;
-  background: none;
-  border: none;
-  color: var(--accent);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 34px; /* touch target (spec) */
+  padding: var(--space-1) var(--space-3);
+  background: transparent;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
   font-family: var(--font-mono);
   font-size: var(--fs-step--1);
   letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
   cursor: pointer;
-  padding: var(--space-2) var(--space-1);
-  margin-inline-start: calc(-1 * var(--space-1));
-  text-decoration: underline;
-  text-underline-offset: var(--space-1);
   transition: var(--transition-colors);
 }
 
 .expand:hover {
-  color: var(--accent-hover);
+  color: var(--text-primary);
+  border-color: var(--border-strong);
+  background-color: var(--surface-3);
 }
 
 .expand:focus-visible {
   outline: 2px solid var(--ring);
   outline-offset: 2px;
-  border-radius: var(--radius-xs);
+}
+
+.expandGlyph {
+  color: var(--text-faint);
+  font-size: var(--fs-step--1);
+  line-height: 1;
 }
 
 /* Animated raw-receipt region (height + opacity via Framer Motion) */
@@ -300,46 +332,48 @@
   padding-top: var(--space-1);
 }
 
-/* Empty state */
+/* Empty state — intentional, centered mono */
 .empty {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: var(--space-3);
-  padding: var(--space-6) var(--space-4);
+  gap: var(--space-2);
+  padding: var(--space-5) var(--space-3);
   text-align: center;
 }
 
-.emptyMark {
-  position: relative;
-  width: var(--space-5);
-  height: var(--space-5);
-  border-radius: var(--radius-full);
-  border: 1px solid var(--border-subtle);
-  background: var(--accent-muted);
-}
-
-.emptyMark::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  margin: auto;
+.emptySignal {
   width: var(--space-2);
   height: var(--space-2);
   border-radius: var(--radius-full);
   background: var(--accent);
+  margin-bottom: var(--space-1);
+}
+
+.emptyKicker,
+.emptyTitle,
+.emptyHint {
+  margin: 0;
+  font-family: var(--font-mono);
+}
+
+.emptyKicker {
+  font-size: var(--fs-step--1);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--text-faint);
 }
 
 .emptyTitle {
-  margin: 0;
-  font-family: var(--font-display);
-  font-size: var(--fs-step-1);
-  font-weight: var(--weight-semibold);
+  font-size: var(--fs-step-0);
+  font-weight: var(--weight-medium);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
   color: var(--text-primary);
 }
 
-.emptyBody {
-  margin: 0;
+.emptyHint {
+  max-width: 44ch;
   font-size: var(--fs-step--1);
   color: var(--text-muted);
   line-height: var(--lh-normal);

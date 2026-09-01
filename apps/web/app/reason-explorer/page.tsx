@@ -97,41 +97,53 @@ export default function ReasonExplorerPage() {
       </motion.div>
 
       {receipts === undefined ? (
-        <Skeleton lines={6} />
+        <Card>
+          <Skeleton lines={6} />
+        </Card>
       ) : receipts.length === 0 ? (
         <Card>
           <div className={styles.empty}>
-            <span className={styles.emptyMark} aria-hidden />
+            <span className={styles.emptySignal} aria-hidden />
+            <p className={styles.emptyKicker}>{"// audit stream · signal null"}</p>
             <p className={styles.emptyTitle}>No receipts on record</p>
-            <p className={styles.emptyBody}>
-              No AuditEvents found for this brain yet. Arm the guardian — each epoch it will post a receipt here.
+            <p className={styles.emptyHint}>
+              Arm the guardian — each epoch it will post an AuditEvent here.
             </p>
           </div>
         </Card>
       ) : (
         <div className={styles.ledger}>
-          <header className={styles.summary}>
-            <div className={styles.summaryHead}>
-              <span className={styles.summaryKicker}>Decision tally</span>
-              <span className={styles.summaryTotal}>
-                {tally.total} {tally.total === 1 ? "receipt" : "receipts"}
-              </span>
-            </div>
-            <dl className={styles.tally}>
-              <div className={styles.tallyItem}>
-                <dt className={styles.tallyLabel}>HEDGE</dt>
-                <dd className={`${styles.tallyValue} ${styles.tallyDanger}`}>{tally.HEDGE}</dd>
+          <motion.div variants={fadeUp}>
+            <Card className={`${styles.summaryCard} ${patterns.gridLines}`}>
+              <div className={styles.summaryInner}>
+                <div className={styles.summaryHead}>
+                  <span className={styles.summaryKicker}>Decision tally</span>
+                  <span className={styles.summaryLive}>
+                    <span className={styles.liveDot} aria-hidden />
+                    live · {tally.total} {tally.total === 1 ? "receipt" : "receipts"}
+                  </span>
+                </div>
+                <dl className={styles.tally}>
+                  <div className={styles.tallyItem}>
+                    <dt className={styles.tallyLabel}>HEDGE</dt>
+                    <dd className={`${styles.tallyValue} ${styles.tallyDanger}`}>{tally.HEDGE}</dd>
+                  </div>
+                  <div className={styles.tallyItem}>
+                    <dt className={styles.tallyLabel}>STAND_DOWN</dt>
+                    <dd className={`${styles.tallyValue} ${styles.tallySuccess}`}>{tally.STAND_DOWN}</dd>
+                  </div>
+                  <div className={styles.tallyItem}>
+                    <dt className={styles.tallyLabel}>HOLD</dt>
+                    <dd className={`${styles.tallyValue} ${styles.tallyNeutral}`}>{tally.HOLD}</dd>
+                  </div>
+                  <div className={`${styles.tallyItem} ${styles.tallyTotalItem}`}>
+                    <dt className={styles.tallyLabel}>TOTAL</dt>
+                    <dd className={`${styles.tallyValue} ${styles.tallyTotal}`}>{tally.total}</dd>
+                  </div>
+                </dl>
               </div>
-              <div className={styles.tallyItem}>
-                <dt className={styles.tallyLabel}>STAND_DOWN</dt>
-                <dd className={`${styles.tallyValue} ${styles.tallySuccess}`}>{tally.STAND_DOWN}</dd>
-              </div>
-              <div className={styles.tallyItem}>
-                <dt className={styles.tallyLabel}>HOLD</dt>
-                <dd className={`${styles.tallyValue} ${styles.tallyNeutral}`}>{tally.HOLD}</dd>
-              </div>
-            </dl>
-          </header>
+            </Card>
+          </motion.div>
 
           {receipts.map((r) => {
             const key = `${r.transactionHash}-${r.logIndex}`;
@@ -142,8 +154,10 @@ export default function ReasonExplorerPage() {
             const pct = Math.max(0, Math.min(100, r.confidence ?? 0));
             const isOpen = expanded === key;
             return (
-              <motion.article key={key} variants={fadeUp} className={styles.entry}>
-                <div className={`${styles.entrySurface} ${patterns.gridLines}`}>
+              <motion.article key={key} variants={fadeUp}>
+                <div
+                  className={`${styles.entrySurface} ${patterns.glassCard} ${patterns.edgeLight} ${patterns.gridLines}`}
+                >
                   <span className={`${styles.rail} ${railClass}`} aria-hidden />
                   <div className={styles.entryTop}>
                     <div className={styles.entryMain}>
@@ -192,6 +206,7 @@ export default function ReasonExplorerPage() {
                       onClick={() => setExpanded(isOpen ? null : key)}
                       aria-expanded={isOpen}
                     >
+                      <span className={styles.expandGlyph} aria-hidden>{isOpen ? "▴" : "▾"}</span>
                       {isOpen ? "Hide raw receipt" : "Show raw receipt"}
                     </button>
                   </div>

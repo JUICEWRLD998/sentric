@@ -8,6 +8,10 @@
 Built for the **Somnia × DreamDEX "Event Contracts" Hackathon** (DoraHacks).
 Testnet chainId **50312** · Live web app in `apps/web`.
 
+**Status — LIVE ON TESTNET:** the v4 brain is **armed** (subscription `15252347`,
+33 STT reserve, 5-minute price feed) and self-waking every ~5 min, posting real
+AuditEvents to the Reason Explorer. 71/71 contract tests · frontend build green.
+
 ---
 
 ## The problem
@@ -67,7 +71,7 @@ The user experience is one toggle: **"Protect my position."**
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │  FRONTEND (apps/web) — Next.js 16 + TS · CSS Modules ·      │
-│  Framer Motion · Noviq UI (OKLCH tokens)                    │
+│  Framer Motion · SIGNAL DECK design system (custom tokens)  │
 │  Wallet connect · arm/disarm · live dashboard · Reason      │
 │  Explorer (audit receipts) · live order book (read-only)    │
 └──────────────────────────────┬──────────────────────────────┘
@@ -135,7 +139,7 @@ EpochTick (reactivity, synthetic tx, same 100ms block)
 | Server state | @tanstack/react-query |
 | A11y primitives | Radix UI (unstyled) — Dialog, Slider, Tabs, Toast, Tooltip |
 | Animation | Framer Motion (only) |
-| Styling | Noviq UI Playbook — dark-first, OKLCH, light/dark themes, no Tailwind |
+| Styling | Custom **SIGNAL DECK** system — flat ink surfaces, mint signal accent, light/dark themes, no Tailwind |
 
 ## Live app
 
@@ -157,7 +161,7 @@ somnia/
 ├─ README.md              ← this file
 ├─ test.md                ← how to use the product, end to end
 ├─ demo.md                ← demo runbook + voiceover script
-├─ apps/web/              Next.js frontend (Noviq UI)
+├─ apps/web/              Next.js frontend (SIGNAL DECK design system)
 ├─ contracts/             Foundry — SentricBrain.sol, SentricVault.sol, tests
 ├─ packages/              sdk-shared (workspace package)
 ├─ scripts/               deploy-*.js, watch-cycle.py, track-equity.js, wait-live-window.js
@@ -188,7 +192,7 @@ at your own deployments, `NEXT_PUBLIC_BRAIN_ADDRESS` / `NEXT_PUBLIC_VAULT_ADDRES
 
 | Contract | Address |
 |---|---|
-| SentricBrain v4 (current, unarmed) | `0xb7ce698f31d8ad10a1714f3da701cdc32c58067e` |
+| SentricBrain v4 (current, **ARMED** — live autonomy) | `0xb7ce698f31d8ad10a1714f3da701cdc32c58067e` |
 | SentricVault v2 | `0xd4fa5efd13d7cb247c26d267014164031c93885f` |
 | SentricBrain v2 (historical receipts) | `0x9b0ee5aff990d09a099672a621b7ce18d7ac98ec` |
 | tUSDC (6 dp, faucet) | `0x70a86D8842FB63C4Ad2b7cdddF530eBf1BB25d8E` |

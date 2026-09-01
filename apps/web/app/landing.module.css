@@ -1,5 +1,6 @@
-/* Landing page — layout + composition only. Tokens live in tokens.css;
-   surfaces in patterns.module.css. Framer Motion presets in lib/motion.ts. */
+/* Landing — 'SIGNAL DECK' composition only.
+   Tokens: app/tokens.css · Surfaces: patterns.module.css · Motion: lib/motion.ts.
+   Flat surfaces, hairline borders, one signal accent — no blur, no gradients. */
 
 .main {
   position: relative;
@@ -18,7 +19,7 @@
 
 .hero {
   display: grid;
-  grid-template-columns: minmax(0, 1.08fr) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1.06fr) minmax(0, 0.94fr);
   gap: var(--space-8);
   align-items: center;
   padding-top: var(--space-7);
@@ -42,32 +43,28 @@
 }
 
 .eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
   font-family: var(--font-mono);
   font-size: var(--fs-step--1);
   letter-spacing: var(--tracking-wide);
   text-transform: uppercase;
-  color: var(--accent);
+  color: var(--text-muted);
 }
 
 .title {
+  margin: 0;
   font-family: var(--font-display);
   font-size: var(--fs-step-6);
   line-height: var(--lh-tight);
   letter-spacing: var(--tracking-tight);
-  margin: 0;
   text-wrap: balance;
 }
 
-.accent {
-  color: var(--accent);
-}
-
-.lede {
-  font-size: var(--fs-step-1);
-  color: var(--text-secondary);
-  line-height: var(--lh-snug);
-  max-width: 48ch;
-  margin: 0;
+.titleAccent {
+  color: var(--signal-300);
 }
 
 /* Keep the display headline from overflowing at the smallest widths. */
@@ -77,11 +74,19 @@
   }
 }
 
+.lede {
+  margin: 0;
+  max-width: 46ch;
+  font-size: var(--fs-step-1);
+  line-height: var(--lh-snug);
+  color: var(--text-secondary);
+}
+
 .actions {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
   flex-wrap: wrap;
+  gap: var(--space-3);
   margin-top: var(--space-2);
 }
 
@@ -90,7 +95,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: var(--space-8);
+  min-height: calc(var(--space-8) + var(--space-1)); /* ≥34px touch target */
   padding: var(--btn-padding-y) var(--btn-padding-x);
   border-radius: var(--btn-radius);
   font-size: var(--fs-step-0);
@@ -105,37 +110,37 @@
 }
 
 .ctaPrimary {
-  background: var(--btn-accent-bg);
-  color: var(--btn-accent-fg);
+  background: var(--accent);
+  color: var(--accent-contrast);
   box-shadow: var(--shadow-1);
 }
 
 .ctaPrimary:hover {
-  background: var(--btn-accent-bg-hover);
+  background: var(--accent-hover);
   box-shadow: var(--shadow-2);
   transform: translateY(-1px);
 }
 
 .ctaPrimary:active {
-  background: var(--btn-accent-bg-active);
+  background: var(--accent-active);
   box-shadow: var(--shadow-1);
   transform: translateY(0);
 }
 
 .ctaSecondary {
-  background: var(--surface-2);
+  background: transparent;
   color: var(--text-primary);
-  border: 1px solid var(--border-subtle);
+  border: 1px solid var(--border-strong);
 }
 
 .ctaSecondary:hover {
-  border-color: var(--border-strong);
-  background: var(--surface-3);
+  border-color: var(--accent);
+  background: var(--accent-muted);
   transform: translateY(-1px);
 }
 
 .ctaSecondary:active {
-  background: var(--surface-inset);
+  background: var(--surface-2);
   transform: translateY(0);
 }
 
@@ -143,22 +148,9 @@
 
 .console {
   position: relative;
-  overflow: hidden;
   display: flex;
   flex-direction: column;
-  background: var(--surface-1);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-3);
-}
-
-.console::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  background: radial-gradient(120% 70% at 50% 0%, var(--accent-muted), transparent 55%);
+  /* Surface: patterns.glassCard + edgeLight; lattice: consoleGrid. */
 }
 
 .consoleGrid {
@@ -177,7 +169,6 @@
   gap: var(--space-3);
   padding: var(--space-3) var(--space-4);
   border-bottom: 1px solid var(--border-subtle);
-  background: var(--surface-2);
 }
 
 .consoleTitle {
@@ -185,7 +176,7 @@
   font-size: var(--fs-step--1);
   letter-spacing: var(--tracking-wide);
   text-transform: uppercase;
-  color: var(--text-secondary);
+  color: var(--text-muted);
 }
 
 .consoleMeta {
@@ -204,7 +195,7 @@
 
 .consoleRow {
   display: grid;
-  grid-template-columns: minmax(0, 9rem) 1fr;
+  grid-template-columns: minmax(0, 8.5rem) 1fr;
   gap: var(--space-3) var(--space-4);
   align-items: start;
   padding: var(--space-4);
@@ -215,13 +206,13 @@
 }
 
 .consoleLabel {
+  padding-top: var(--space-1);
   font-family: var(--font-mono);
   font-size: var(--fs-step--1);
   letter-spacing: var(--tracking-wide);
   text-transform: uppercase;
   color: var(--text-faint);
-  line-height: 1.4;
-  padding-top: var(--space-1);
+  line-height: var(--lh-normal);
 }
 
 .consoleCell {
@@ -234,8 +225,31 @@
 .consoleAgent {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
   flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+/* Slow scan ring orbits the agent dot (Framer-driven, reduced-motion gated). */
+.agentOrb {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.scanRing {
+  position: absolute;
+  inset: calc(-1 * var(--space-2));
+  border: 1px dashed var(--accent);
+  border-radius: var(--radius-full);
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+.agentState {
+  font-size: var(--fs-step-0);
+  font-weight: var(--weight-medium);
+  color: var(--text-primary);
 }
 
 .consoleHint {
@@ -252,7 +266,7 @@
 
 .oddsBar {
   display: flex;
-  height: 8px;
+  height: var(--space-2);
   border-radius: var(--radius-full);
   background: var(--surface-inset);
   overflow: hidden;
@@ -261,13 +275,13 @@
 .oddsUp {
   height: 100%;
   flex: none;
-  background: linear-gradient(90deg, var(--accent-hover), var(--accent));
+  background: var(--accent);
 }
 
 .oddsDown {
   height: 100%;
   flex: 1;
-  background: var(--surface-3);
+  background: var(--warning);
 }
 
 .oddsLabels {
@@ -345,11 +359,12 @@
 /* -------------------------------------------------------- the loop */
 
 .steps {
-  --node: 28px;
-  --node-half: 14px;
+  --node: var(--space-6);
+  --node-half: calc(var(--node) / 2);
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: var(--space-6);
+  list-style: none;
   width: 100%;
 }
 
@@ -362,8 +377,7 @@
   min-width: 0;
 }
 
-/* Flow connector — fades from a neutral seam into the accent of the
-   next node, reading as directional motion between milestones. */
+/* Connector hairline between numbered nodes. */
 .step:not(:last-child)::after {
   content: '';
   position: absolute;
@@ -371,40 +385,40 @@
   left: var(--node);
   right: calc(-1 * (var(--space-6) + var(--node-half)));
   height: 1px;
-  background: linear-gradient(90deg, var(--border-subtle), var(--accent));
+  background: var(--border-strong);
 }
 
 .stepNum {
   position: relative;
   z-index: 1;
-  width: var(--node);
-  height: var(--node);
   display: grid;
   place-items: center;
+  width: var(--node);
+  height: var(--node);
+  border-radius: var(--radius-full);
+  background: var(--accent);
+  color: var(--accent-contrast);
+  box-shadow: 0 0 0 var(--space-1) var(--accent-muted);
   font-family: var(--font-mono);
   font-size: var(--fs-step--1);
-  letter-spacing: 0.04em;
+  letter-spacing: var(--tracking-wide);
+  font-weight: var(--weight-semibold);
   font-variant-numeric: tabular-nums;
-  color: var(--accent);
-  background: var(--surface-0);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-full);
-  box-shadow: 0 0 0 3px var(--accent-muted);
 }
 
 .stepTitle {
+  margin: 0;
   font-family: var(--font-sans);
   font-size: var(--fs-step-1);
   font-weight: var(--weight-semibold);
   color: var(--text-primary);
-  margin: 0;
 }
 
 .stepBody {
-  font-size: var(--fs-step--1);
-  color: var(--text-secondary);
-  line-height: var(--lh-snug);
   margin: 0;
+  font-size: var(--fs-step--1);
+  line-height: var(--lh-snug);
+  color: var(--text-secondary);
 }
 
 /* Two-up on tablet — the horizontal connector only joins left→right
@@ -437,7 +451,7 @@
     right: auto;
     width: 1px;
     height: auto;
-    background: linear-gradient(180deg, var(--border-subtle), var(--accent));
+    background: var(--border-strong);
   }
 
   .step:nth-child(even)::after {
@@ -455,10 +469,10 @@
 
 .proof {
   display: grid;
-  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: var(--space-6);
-  width: 100%;
   align-items: stretch;
+  width: 100%;
 }
 
 @media (max-width: 860px) {
@@ -467,16 +481,14 @@
   }
 }
 
-/* Verifiable proof strip — small, technical, not a metrics band. */
+/* Quiet hairline stats row — no card, just bookend + divider hairlines. */
 .proofFacts {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: var(--space-5);
   width: 100%;
-  padding: var(--space-5);
-  background: var(--surface-1);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-lg);
+  padding-block: var(--space-5);
+  border-block: 1px solid var(--border-subtle);
 }
 
 .fact {
@@ -509,16 +521,25 @@
   line-height: var(--lh-snug);
 }
 
-@media (max-width: 640px) {
+@media (max-width: 900px) {
   .proofFacts {
-    grid-template-columns: 1fr;
-    gap: var(--space-4);
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-4) var(--space-5);
   }
 
   .fact + .fact {
     border-left: none;
-    border-top: 1px solid var(--border-subtle);
     padding-left: 0;
+  }
+}
+
+@media (max-width: 560px) {
+  .proofFacts {
+    grid-template-columns: 1fr;
+  }
+
+  .fact + .fact {
+    border-top: 1px solid var(--border-subtle);
     padding-top: var(--space-4);
   }
 }
@@ -527,11 +548,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
-  padding: var(--space-5);
-  background: var(--surface-1);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-2);
+  padding: var(--card-padding);
 }
 
 .receiptHead {
@@ -559,7 +576,7 @@
 .receiptField {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--space-1);
   min-width: 0;
 }
 
@@ -584,14 +601,14 @@
 }
 
 .textLink {
-  color: var(--accent);
+  color: var(--link);
   font-size: var(--fs-step--1);
   text-decoration: none;
   transition: color var(--dur-2) var(--ease-out-quart);
 }
 
 .textLink:hover {
-  color: var(--accent-hover);
+  color: var(--link-hover);
   text-decoration: underline;
   text-underline-offset: 3px;
 }
@@ -612,50 +629,32 @@
 .rail {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--space-1);
 }
 
 .railTitle {
   font-size: var(--fs-step-0);
-  color: var(--text-primary);
   font-weight: var(--weight-medium);
+  color: var(--text-primary);
 }
 
 .railBody {
   font-size: var(--fs-step--1);
-  color: var(--text-secondary);
   line-height: var(--lh-snug);
+  color: var(--text-secondary);
 }
 
 /* ------------------------------------------------------- closing */
 
 .closing {
-  position: relative;
-  overflow: hidden;
   display: flex;
   flex-direction: column;
   align-items: center;
   text-align: center;
   gap: var(--space-5);
-  padding: var(--space-8) var(--space-6);
+  padding: var(--space-8) 0;
   width: 100%;
-  background: var(--surface-1);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-2xl);
-}
-
-.closing::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  background: radial-gradient(90% 120% at 50% 0%, var(--accent-muted), transparent 60%);
-}
-
-.closing > * {
-  position: relative;
-  z-index: 1;
+  border-top: 1px solid var(--border-subtle);
 }
 
 .closing .actions {
@@ -664,11 +663,17 @@
 }
 
 .closingTitle {
+  margin: 0;
+  max-width: 24ch;
   font-family: var(--font-display);
   font-size: var(--fs-step-4);
   line-height: var(--lh-tight);
   letter-spacing: var(--tracking-tight);
-  margin: 0;
-  max-width: 24ch;
   text-wrap: balance;
+}
+
+.closingLede {
+  margin: 0;
+  font-size: var(--fs-step-0);
+  color: var(--text-secondary);
 }

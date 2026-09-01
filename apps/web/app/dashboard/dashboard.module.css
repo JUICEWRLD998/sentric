@@ -8,10 +8,10 @@
   width: 100%;
 }
 
-/* ---- System status strip (hairline grid of glanceable KPIs) ---- */
+/* ---- System status strip: hairline grid, label top / value bottom ---- */
 .strip {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 1px;
   background: var(--border-subtle);
   border: 1px solid var(--border-subtle);
@@ -25,14 +25,9 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: var(--space-3);
-  min-height: calc(var(--space-6) * 2);
+  min-height: calc(var(--space-5) * 2);
   padding: var(--space-4);
   background: var(--surface-2);
-  transition: background-color var(--dur-2) var(--ease-out-quart);
-}
-
-.kpi:hover {
-  background: var(--surface-3);
 }
 
 .kpiLabel {
@@ -72,30 +67,117 @@
   gap: var(--space-3);
 }
 
-/* ---- Arm the guardian: focal action panel ---- */
+.hint {
+  font-family: var(--font-mono);
+  font-size: var(--fs-step--1);
+  font-variant-numeric: tabular-nums;
+  color: var(--text-faint);
+}
+
+/* ---- Agent · arm control panel ---- */
 .armPanel {
   position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  background: var(--surface-inset);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+}
+
+.armRow {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
   flex-wrap: wrap;
-  margin-top: var(--space-2);
+}
+
+.armPending {
+  font-family: var(--font-mono);
+  font-size: var(--fs-step--1);
+  color: var(--text-muted);
+  animation: arm-blink 1.2s ease-in-out infinite;
+}
+
+@keyframes arm-blink {
+  50% {
+    opacity: 0.35;
+  }
+}
+
+/* Preflight notes — mono, small, token-colored. */
+.noteFaint {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: var(--fs-step--1);
+  font-variant-numeric: tabular-nums;
+  color: var(--text-faint);
+}
+
+.noteWarning {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: var(--fs-step--1);
+  font-variant-numeric: tabular-nums;
+  color: var(--warning);
+  border-left: 2px solid var(--warning);
+  padding-left: var(--space-2);
+}
+
+.armHint {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: var(--fs-step--1);
+  font-variant-numeric: tabular-nums;
+  color: var(--accent);
+  border-left: 2px solid var(--accent);
+  padding-left: var(--space-2);
+}
+
+.armError {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: var(--fs-step--1);
+  font-variant-numeric: tabular-nums;
+  color: var(--danger);
+  border-left: 2px solid var(--danger);
+  padding-left: var(--space-2);
+  word-break: break-word;
+}
+
+/* ---- Vault · collateral hero ---- */
+.heroStat {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
   padding: var(--space-4);
-  background: var(--accent-muted);
-  border: 1px solid var(--glass-border);
+  background: var(--surface-inset);
+  border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
 }
 
-.armPanel::before {
-  content: "";
-  position: absolute;
-  left: 0;
-  top: var(--space-3);
-  bottom: var(--space-3);
-  width: 2px;
-  border-radius: var(--radius-full);
-  background: var(--accent);
+.heroLabel {
+  font-family: var(--font-mono);
+  font-size: var(--fs-step--1);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wide);
+  color: var(--text-faint);
+}
+
+.heroValue {
+  font-family: var(--font-mono);
+  font-size: var(--fs-step-3);
+  font-weight: var(--weight-semibold);
+  line-height: var(--lh-tight);
+  font-variant-numeric: tabular-nums;
+  color: var(--success);
+}
+
+.heroSub {
+  font-size: var(--fs-step--1);
+  color: var(--text-muted);
 }
 
 /* ---- Premium budget meter ---- */
@@ -130,18 +212,19 @@
 .meter {
   height: var(--space-2);
   border-radius: var(--radius-full);
-  background: var(--surface-3);
+  background: var(--surface-inset);
+  border: 1px solid var(--border-subtle);
   overflow: hidden;
 }
 
 .meterFill {
   height: 100%;
   border-radius: var(--radius-full);
-  background: linear-gradient(90deg, var(--violet-600), var(--violet-400));
+  background: linear-gradient(90deg, var(--signal-600), var(--signal-400));
   box-shadow: var(--shadow-accent-glow);
 }
 
-/* ---- Odds bar ---- */
+/* ---- Live market · two-segment odds bar ---- */
 .oddsBlock {
   display: flex;
   flex-direction: column;
@@ -163,18 +246,19 @@
 }
 
 .oddsUpLabel {
-  color: var(--accent);
+  color: var(--signal-300);
 }
 
 .oddsDownLabel {
-  color: var(--warning);
+  color: var(--amber-400);
 }
 
 .oddsBar {
   position: relative;
+  display: flex;
   height: var(--space-3);
   border-radius: var(--radius-full);
-  background: var(--warning-muted);
+  background: var(--surface-inset);
   overflow: hidden;
 }
 
@@ -187,29 +271,31 @@
   left: 50%;
   width: 1px;
   background: var(--border-strong);
-  opacity: 0.7;
+  z-index: 1;
 }
 
 .oddsUp {
   height: 100%;
-  border-radius: var(--radius-full);
-  background: linear-gradient(90deg, var(--violet-700), var(--violet-400));
+  background: linear-gradient(90deg, var(--signal-600), var(--signal-400));
   box-shadow: var(--shadow-accent-glow);
 }
 
-/* ---- Misc ---- */
-.hint {
-  font-family: var(--font-mono);
-  font-size: var(--fs-step--1);
-  font-variant-numeric: tabular-nums;
-  color: var(--text-faint);
+.oddsDown {
+  height: 100%;
+  background: linear-gradient(90deg, var(--amber-400), var(--amber-500));
 }
 
+/* ---- Thresholds · locked until connected ---- */
+.slidersDisabled {
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+/* ---- Hedge history table: quiet rows, hairline separators only ---- */
 .history {
   margin-top: var(--space-2);
 }
 
-/* ---- Hedge history table ---- */
 .tableWrap {
   overflow-x: auto;
   overscroll-behavior-x: contain;
@@ -246,12 +332,8 @@
   transition: background-color var(--dur-2) var(--ease-out-quart);
 }
 
-.table tbody tr:nth-child(even) {
-  background: var(--surface-1);
-}
-
 .table tbody tr:hover {
-  background: var(--accent-muted);
+  background: var(--surface-3);
 }
 
 .table tbody tr:last-child td {

@@ -1,6 +1,6 @@
 'use client';
 
-import { motion } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
 import Link from 'next/link';
 import { easings, fadeUp, fadeUpSm, staggerParent } from '@/lib/motion';
 import { Badge, Pulse, SectionHeading, Skeleton, Stat } from '@/components/ui';
@@ -42,8 +42,9 @@ const RAILS = [
 
 const FACTS = [
   ['71/71', 'forge tests pass'],
-  ['100%', 'on-chain — no server, API key or oracle'],
+  ['100%', 'on-chain'],
   ['~5 min', 'self-waking cadence'],
+  ['0', 'servers, keys or oracles'],
 ] as const;
 
 export default function Landing() {
@@ -57,9 +58,11 @@ export default function Landing() {
   const pDown = book?.pDownRaw ? Number(book.pDownRaw) / 1e6 : null;
   const upWidth = pUp !== null ? `${Math.round(pUp * 1000) / 10}%` : '50%';
 
+  const reduceMotion = useReducedMotion();
+
   return (
     <>
-      {/* Full-bleed static background: mesh gradient + film grain. */}
+      {/* Full-bleed aurora + dot lattice page backdrop. */}
       <div className={`${patterns.mesh} ${patterns.filmGrain}`} aria-hidden='true' />
 
       <motion.main
@@ -71,11 +74,14 @@ export default function Landing() {
         {/* ------------------------------------------------------------ hero */}
         <motion.section variants={fadeUp} className={styles.hero}>
           <div className={styles.heroCopy}>
-            <p className={styles.eyebrow}>Autonomous portfolio insurance · Somnia</p>
+            <p className={styles.eyebrow}>
+              <Pulse tone='accent' live={Boolean(brain?.isSubscribed)} />
+              <span>Autonomous portfolio insurance · Somnia</span>
+            </p>
             <h1 className={styles.title}>
               Your portfolio
               <br />
-              guards <span className={styles.accent}>itself</span>.
+              guards <span className={styles.titleAccent}>itself</span>.
             </h1>
             <p className={styles.lede}>
               Sentric is an autonomous insurance agent living on the Somnia blockchain. It
@@ -95,7 +101,7 @@ export default function Landing() {
           {/* Guardian console — the live product surface. */}
           <motion.aside
             variants={fadeUpSm}
-            className={styles.console}
+            className={`${styles.console} ${patterns.glassCard} ${patterns.edgeLight}`}
             aria-label='Guardian console'
           >
             <div className={`${styles.consoleGrid} ${patterns.gridLines}`} aria-hidden='true' />
@@ -110,11 +116,23 @@ export default function Landing() {
                 <span className={styles.consoleLabel}>agent</span>
                 <div className={styles.consoleCell}>
                   <div className={styles.consoleAgent}>
-                    <Pulse
-                      tone={brain?.positionOpen ? 'accent' : 'neutral'}
-                      live={Boolean(brain?.isSubscribed)}
-                      label={brain?.positionOpen ? 'Hedging' : 'Standing by'}
-                    />
+                    <div className={styles.agentOrb}>
+                      {!reduceMotion && (
+                        <motion.span
+                          className={styles.scanRing}
+                          aria-hidden
+                          animate={{ rotate: 360 }}
+                          transition={{ duration: 16, ease: 'linear', repeat: Infinity }}
+                        />
+                      )}
+                      <Pulse
+                        tone={brain?.positionOpen ? 'accent' : 'neutral'}
+                        live={Boolean(brain?.isSubscribed)}
+                      />
+                    </div>
+                    <span className={styles.agentState}>
+                      {brain?.positionOpen ? 'Hedging' : 'Standing by'}
+                    </span>
                     {brain?.isSubscribed ? (
                       <Badge tone='success' dot>
                         subscribed
@@ -123,7 +141,9 @@ export default function Landing() {
                       <Badge tone='neutral'>awaiting arm</Badge>
                     )}
                   </div>
-                  <span className={styles.consoleHint}>cycle state · {brain?.stateName ?? '–'}</span>
+                  <span className={styles.consoleHint}>
+                    cycle state · {brain?.stateName ?? '–'}
+                  </span>
                 </div>
               </div>
 
@@ -135,6 +155,7 @@ export default function Landing() {
                       <div className={styles.oddsBar} aria-hidden='true'>
                         <motion.div
                           className={styles.oddsUp}
+                          initial={{ width: '50%' }}
                           animate={{ width: upWidth }}
                           transition={{ duration: 0.6, ease: easings.outExpo }}
                         />
@@ -203,15 +224,15 @@ export default function Landing() {
             title='A guardian that never sleeps'
             description='Four steps, every ~5 minutes, entirely on-chain.'
           />
-          <div className={styles.steps}>
+          <ol className={styles.steps}>
             {STEPS.map((s) => (
-              <div key={s.n} className={styles.step}>
+              <li key={s.n} className={styles.step}>
                 <span className={styles.stepNum}>{s.n}</span>
                 <h3 className={styles.stepTitle}>{s.title}</h3>
                 <p className={styles.stepBody}>{s.body}</p>
-              </div>
+              </li>
             ))}
-          </div>
+          </ol>
         </motion.section>
 
         {/* --------------------------------------------------- live proof */}
@@ -230,7 +251,7 @@ export default function Landing() {
             ))}
           </div>
           <div className={styles.proof}>
-            <div className={styles.receipt}>
+            <div className={`${styles.receipt} ${patterns.glassCard} ${patterns.edgeLight}`}>
               <div className={styles.receiptHead}>
                 <span className={styles.receiptLabel}>Audit receipt</span>
                 {latest && (
@@ -286,12 +307,12 @@ export default function Landing() {
         {/* ------------------------------------------------------- closing */}
         <motion.section variants={fadeUp} className={styles.closing}>
           <h2 className={styles.closingTitle}>Stop watching the charts. Sentric does.</h2>
+          <p className={styles.closingLede}>
+            The guardian is live on the Somnia testnet — every move receipted on-chain.
+          </p>
           <div className={styles.actions}>
             <Link className={styles.ctaPrimary} href='/dashboard'>
               Go to the dashboard
-            </Link>
-            <Link className={styles.ctaSecondary} href='/reason-explorer'>
-              Explore the receipts
             </Link>
           </div>
         </motion.section>

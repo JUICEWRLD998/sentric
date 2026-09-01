@@ -7,6 +7,6 @@
 .line {
   width: 100%;
   min-height: var(--space-3);
-  background: var(--neutral-800);
+  background: var(--surface-inset);
   border-radius: var(--radius-xs);
 }

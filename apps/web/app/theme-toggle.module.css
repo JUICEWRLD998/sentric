@@ -16,8 +16,8 @@
 }
 
 .toggle:hover {
-  color: var(--text-primary);
-  border-color: var(--border-strong);
+  color: var(--signal-300);
+  border-color: color-mix(in oklch, var(--signal-400) 45%, transparent);
 }
 
 .icon {
