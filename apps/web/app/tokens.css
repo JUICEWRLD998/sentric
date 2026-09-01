@@ -121,12 +121,51 @@
   --code-bg: var(--surface-0); --code-fg: var(--neutral-200); --code-radius: var(--radius-sm);
 }
 
-/* ---- Light theme = override Tier 2 only ---- */
+/* ---- Light theme = override Tier 2 only (never Tier 1 or Tier 3) ---- */
 [data-theme="light"] {
-  --surface-0: oklch(0.98 0.006 265); --surface-1: oklch(0.96 0.008 265);
-  --surface-2: oklch(0.99 0.005 265); --surface-3: oklch(0.94 0.01 265);
-  --text-primary: var(--neutral-950); --text-secondary: var(--neutral-700);
-  --accent: var(--violet-600);        /* darker accent for contrast on light */
-  --border-subtle: oklch(0.55 0.02 265 / 0.24);
-  /* ...re-tint shadows lighter; still no pure white */
+  /* surfaces — tinted, no pure white */
+  --surface-0: oklch(0.98 0.006 265);
+  --surface-1: oklch(0.96 0.008 265);
+  --surface-2: oklch(0.99 0.005 265);
+  --surface-3: oklch(0.94 0.01 265);
+  --surface-inset: oklch(0.90 0.012 265);
+
+  /* text — darker ink on light */
+  --text-primary: var(--neutral-950);
+  --text-secondary: var(--neutral-700);
+  --text-muted: var(--neutral-600);
+  --text-faint: var(--neutral-500);
+  --text-inverse: var(--neutral-50);
+
+  /* borders — lighter, lower opacity */
+  --border-subtle: oklch(0.55 0.02 265 / 0.28);
+  --border-strong: oklch(0.45 0.02 265 / 0.55);
+
+  /* accent — darker violet for contrast on light */
+  --accent: var(--violet-600);
+  --accent-hover: var(--violet-700);
+  --accent-active: var(--violet-500);
+  --accent-muted: oklch(0.55 0.19 285 / 0.14);
+  --accent-contrast: var(--neutral-50);
+
+  --ring: var(--violet-500);
+  --link: var(--violet-600);
+  --link-hover: var(--violet-700);
+
+  /* glass — near-white translucent fill + faint edge highlight */
+  --glass-bg: oklch(0.98 0.005 265 / 0.72);
+  --glass-border: oklch(0.55 0.04 285 / 0.18);
+  --glass-highlight: oklch(0.98 0.005 265 / 0.75);
+
+  /* shadows — lighter, softer */
+  --shadow-1: 0 1px 2px oklch(0.35 0.02 265 / 0.08);
+  --shadow-2: 0 4px 12px oklch(0.35 0.02 265 / 0.10);
+  --shadow-3: 0 12px 32px oklch(0.30 0.02 265 / 0.12);
+  --shadow-4: 0 24px 64px oklch(0.25 0.02 265 / 0.16);
+  --shadow-accent-glow: 0 0 28px oklch(0.55 0.19 285 / 0.30);
+  --shadow-danger-glow: 0 0 28px oklch(0.54 0.21 27 / 0.30);
+
+  /* code surfaces */
+  --code-bg: oklch(0.96 0.008 265);
+  --code-fg: var(--neutral-800);
 }

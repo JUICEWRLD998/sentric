@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
-import { motion } from "framer-motion";
-import { fadeUp, staggerParent } from "@/lib/motion";
+import { useMemo, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import { durationsSec, easings, fadeUp, staggerParent } from "@/lib/motion";
 import type { Address } from "viem";
 import { Badge, Card, PageHeader, CodeBlock, Skeleton, Field, Input } from "@/components/ui";
 import patterns from "@/app/patterns.module.css";
@@ -29,10 +29,29 @@ const RAIL_TONE: Record<string, string> = {
   default: styles.railHold,
 };
 
+const CONFIDENCE_FILL_TONE: Record<string, string> = {
+  danger: styles.confDanger,
+  success: styles.confSuccess,
+  default: styles.confHold,
+};
+
 export default function ReasonExplorerPage() {
   const [brain, setBrain] = useState<string>(ADDRESSES.brain);
   const receipts = useAuditHistory(brain as Address, 20);
   const [expanded, setExpanded] = useState<string | null>(null);
+
+  // Summary tally is derived from the loaded receipts — never hardcoded.
+  const tally = useMemo(() => {
+    const list = receipts ?? [];
+    const counts = { HEDGE: 0, STAND_DOWN: 0, HOLD: 0 };
+    for (const r of list) {
+      const key = (r.decision ?? "").toUpperCase();
+      if (key === "HEDGE") counts.HEDGE += 1;
+      else if (key === "STAND_DOWN") counts.STAND_DOWN += 1;
+      else if (key === "HOLD") counts.HOLD += 1;
+    }
+    return { ...counts, total: list.length };
+  }, [receipts]);
 
   return (
     <motion.main
@@ -81,17 +100,46 @@ export default function ReasonExplorerPage() {
         <Skeleton lines={6} />
       ) : receipts.length === 0 ? (
         <Card>
-          <p className={styles.empty}>
-            No AuditEvents found for this brain yet. Arm the guardian — each epoch it will post a receipt here.
-          </p>
+          <div className={styles.empty}>
+            <span className={styles.emptyMark} aria-hidden />
+            <p className={styles.emptyTitle}>No receipts on record</p>
+            <p className={styles.emptyBody}>
+              No AuditEvents found for this brain yet. Arm the guardian — each epoch it will post a receipt here.
+            </p>
+          </div>
         </Card>
       ) : (
         <div className={styles.ledger}>
+          <header className={styles.summary}>
+            <div className={styles.summaryHead}>
+              <span className={styles.summaryKicker}>Decision tally</span>
+              <span className={styles.summaryTotal}>
+                {tally.total} {tally.total === 1 ? "receipt" : "receipts"}
+              </span>
+            </div>
+            <dl className={styles.tally}>
+              <div className={styles.tallyItem}>
+                <dt className={styles.tallyLabel}>HEDGE</dt>
+                <dd className={`${styles.tallyValue} ${styles.tallyDanger}`}>{tally.HEDGE}</dd>
+              </div>
+              <div className={styles.tallyItem}>
+                <dt className={styles.tallyLabel}>STAND_DOWN</dt>
+                <dd className={`${styles.tallyValue} ${styles.tallySuccess}`}>{tally.STAND_DOWN}</dd>
+              </div>
+              <div className={styles.tallyItem}>
+                <dt className={styles.tallyLabel}>HOLD</dt>
+                <dd className={`${styles.tallyValue} ${styles.tallyNeutral}`}>{tally.HOLD}</dd>
+              </div>
+            </dl>
+          </header>
+
           {receipts.map((r) => {
             const key = `${r.transactionHash}-${r.logIndex}`;
             const cardTone = DECISION_CARD_TONE[r.decision] ?? "default";
             const badgeTone = DECISION_BADGE_TONE[r.decision] ?? "neutral";
             const railClass = RAIL_TONE[cardTone];
+            const fillClass = CONFIDENCE_FILL_TONE[cardTone];
+            const pct = Math.max(0, Math.min(100, r.confidence ?? 0));
             const isOpen = expanded === key;
             return (
               <motion.article key={key} variants={fadeUp} className={styles.entry}>
@@ -101,8 +149,25 @@ export default function ReasonExplorerPage() {
                     <div className={styles.entryMain}>
                       <Badge tone={badgeTone} dot>{r.decision}</Badge>
                       <div className={styles.confidence}>
-                        <span className={styles.confidenceValue}>{r.confidence}</span>
-                        <span className={styles.confidenceUnit}>/100</span>
+                        <div className={styles.confidenceHead}>
+                          <span className={styles.confidenceValue}>{r.confidence}</span>
+                          <span className={styles.confidenceUnit}>/100</span>
+                        </div>
+                        <span
+                          className={styles.confidenceTrack}
+                          role="progressbar"
+                          aria-label="Confidence score"
+                          aria-valuemin={0}
+                          aria-valuemax={100}
+                          aria-valuenow={pct}
+                        >
+                          <motion.span
+                            className={`${styles.confidenceFill} ${fillClass}`}
+                            initial={{ width: "0%" }}
+                            animate={{ width: `${pct}%` }}
+                            transition={{ duration: durationsSec[3], ease: easings.outExpo }}
+                          />
+                        </span>
                       </div>
                     </div>
                     <dl className={styles.meta}>
@@ -130,25 +195,36 @@ export default function ReasonExplorerPage() {
                       {isOpen ? "Hide raw receipt" : "Show raw receipt"}
                     </button>
                   </div>
-                  {isOpen && (
-                    <div className={styles.raw}>
-                      <CodeBlock
-                        label={`AuditEvent · ${r.transactionHash}`}
-                        code={JSON.stringify(
-                          {
-                            inputsHash: r.inputsHash,
-                            decision: r.decision,
-                            confidence: r.confidence,
-                            asset: r.asset,
-                            blockNumber: r.blockNumber?.toString(),
-                            transactionHash: r.transactionHash,
-                          },
-                          null,
-                          2
-                        )}
-                      />
-                    </div>
-                  )}
+                  <AnimatePresence initial={false}>
+                    {isOpen && (
+                      <motion.div
+                        key="raw"
+                        className={styles.raw}
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: "auto", opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: durationsSec[2], ease: easings.inOut }}
+                      >
+                        <div className={styles.rawInner}>
+                          <CodeBlock
+                            label={`AuditEvent · ${r.transactionHash}`}
+                            code={JSON.stringify(
+                              {
+                                inputsHash: r.inputsHash,
+                                decision: r.decision,
+                                confidence: r.confidence,
+                                asset: r.asset,
+                                blockNumber: r.blockNumber?.toString(),
+                                transactionHash: r.transactionHash,
+                              },
+                              null,
+                              2
+                            )}
+                          />
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
               </motion.article>
             );

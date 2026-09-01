@@ -35,14 +35,22 @@
   font-family: var(--font-mono);
   font-size: var(--fs-step--1);
   letter-spacing: var(--tracking-wide);
-  padding: var(--space-1) var(--space-3);
+  padding: var(--space-2) var(--space-3);
   border-radius: var(--radius-xs);
   cursor: pointer;
+  line-height: 1;
   transition: var(--transition-colors);
 }
 
 .seg:hover {
   color: var(--text-primary);
+  background: var(--surface-2);
+}
+
+.seg:focus-visible,
+.segActive:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
 }
 
 .segActive {
@@ -50,6 +58,73 @@
   border-color: var(--accent);
   background: var(--accent-muted);
 }
+
+/* Decision tally — a summary header derived from the loaded receipts */
+.summary {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+  padding: var(--space-4) var(--space-5);
+  border-bottom: 1px solid var(--border-subtle);
+  background-color: var(--surface-0);
+}
+
+.summaryHead {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.summaryKicker {
+  font-family: var(--font-mono);
+  font-size: var(--fs-step--1);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.summaryTotal {
+  font-family: var(--font-mono);
+  font-size: var(--fs-step--1);
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.tally {
+  display: flex;
+  gap: var(--space-5);
+  margin: 0;
+}
+
+.tallyItem {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--space-1);
+}
+
+.tallyLabel {
+  font-family: var(--font-mono);
+  font-size: var(--fs-step--1);
+  letter-spacing: var(--tracking-wide);
+  color: var(--text-faint);
+}
+
+.tallyValue {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--fs-step-2);
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--tracking-tight);
+  line-height: var(--lh-tight);
+  font-variant-numeric: tabular-nums;
+}
+
+.tallyDanger { color: var(--danger); }
+.tallySuccess { color: var(--success); }
+.tallyNeutral { color: var(--text-muted); }
 
 /* Chronological ledger — hairline separators, flat rows */
 .ledger {
@@ -69,6 +144,11 @@
   gap: var(--space-3);
   padding: var(--space-4) var(--space-5);
   background-color: var(--surface-1);
+  transition: var(--transition-colors);
+}
+
+.entrySurface:hover {
+  background-color: var(--surface-2);
 }
 
 /* Left accent rail keyed to the decision */
@@ -97,8 +177,16 @@
   gap: var(--space-4);
 }
 
+/* Confidence — value + thin horizontal progress bar (0–100) */
 .confidence {
-  display: inline-flex;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  width: calc(var(--space-6) * 3);
+}
+
+.confidenceHead {
+  display: flex;
   align-items: baseline;
   gap: var(--space-1);
 }
@@ -118,6 +206,25 @@
   font-size: var(--fs-step--1);
   color: var(--text-faint);
 }
+
+.confidenceTrack {
+  display: block;
+  width: 100%;
+  height: var(--space-1);
+  background: var(--surface-inset);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+
+.confidenceFill {
+  display: block;
+  height: 100%;
+  border-radius: var(--radius-full);
+}
+
+.confDanger { background: var(--danger); }
+.confSuccess { background: var(--success); }
+.confHold { background: var(--text-muted); }
 
 /* Right-aligned mono metadata block */
 .meta {
@@ -167,19 +274,73 @@
   font-size: var(--fs-step--1);
   letter-spacing: var(--tracking-wide);
   cursor: pointer;
-  padding: 0;
+  padding: var(--space-2) var(--space-1);
+  margin-inline-start: calc(-1 * var(--space-1));
   text-decoration: underline;
   text-underline-offset: var(--space-1);
+  transition: var(--transition-colors);
 }
 
 .expand:hover {
   color: var(--accent-hover);
 }
 
+.expand:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+  border-radius: var(--radius-xs);
+}
+
+/* Animated raw-receipt region (height + opacity via Framer Motion) */
 .raw {
+  overflow: hidden;
+}
+
+.rawInner {
   padding-top: var(--space-1);
 }
 
+/* Empty state */
 .empty {
-  color: var(--text-faint);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-6) var(--space-4);
+  text-align: center;
+}
+
+.emptyMark {
+  position: relative;
+  width: var(--space-5);
+  height: var(--space-5);
+  border-radius: var(--radius-full);
+  border: 1px solid var(--border-subtle);
+  background: var(--accent-muted);
+}
+
+.emptyMark::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: var(--space-2);
+  height: var(--space-2);
+  border-radius: var(--radius-full);
+  background: var(--accent);
+}
+
+.emptyTitle {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--fs-step-1);
+  font-weight: var(--weight-semibold);
+  color: var(--text-primary);
+}
+
+.emptyBody {
+  margin: 0;
+  font-size: var(--fs-step--1);
+  color: var(--text-muted);
+  line-height: var(--lh-normal);
 }

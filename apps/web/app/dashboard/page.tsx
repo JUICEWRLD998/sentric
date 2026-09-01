@@ -162,14 +162,18 @@ export default function DashboardPage() {
                   sub="outcome tokens"
                 />
               </div>
-              <div className={styles.armRow}>
+              <div className={styles.armPanel}>
                 <Switch
                   checked={!!brain?.isSubscribed}
                   onCheckedChange={(c) => (c ? actions.armBrain() : actions.disarmBrain())}
                   disabled={!isConnected || actions.isPending}
                   label={brain?.isSubscribed ? "Armed" : "Arm the guardian"}
                 />
-                <span className={styles.hint}>33 STT reserve · owner wallet</span>
+                <span className={styles.hint}>
+                  {isConnected
+                    ? "33 STT reserve · owner wallet"
+                    : "Connect wallet to arm the guardian"}
+                </span>
               </div>
             </Stack>
           </Card>
@@ -291,8 +295,11 @@ export default function DashboardPage() {
                   Save thresholds
                 </Button>
                 <span className={styles.hint}>
-                  on-chain: move {moveBpsOnChain?.toString() ?? "–"} bps · down{" "}
-                  {downBpsOnChain?.toString() ?? "–"} bps
+                  {isConnected
+                    ? `on-chain: move ${moveBpsOnChain?.toString() ?? "–"} bps · down ${
+                        downBpsOnChain?.toString() ?? "–"
+                      } bps`
+                    : "Connect wallet to save thresholds"}
                 </span>
               </div>
             </Stack>
@@ -311,8 +318,9 @@ export default function DashboardPage() {
               <span>Arm the guardian and wait for a decision cycle.</span>
             </div>
           ) : (
-            <table className={styles.table}>
-              <thead>
+            <div className={styles.tableWrap}>
+              <table className={styles.table}>
+                <thead>
                 <tr>
                   <th>Event</th>
                   <th className={styles.num}>Block</th>
@@ -331,8 +339,9 @@ export default function DashboardPage() {
                     </td>
                   </tr>
                 ))}
-              </tbody>
-            </table>
+                </tbody>
+              </table>
+            </div>
           )}
         </Card>
       </motion.div>

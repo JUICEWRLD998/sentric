@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Space_Grotesk, Geist, Geist_Mono } from "next/font/google";
 import Script from "next/script";
 import { MotionProvider } from "./motion-provider";
+import { ThemeProvider } from "./theme-provider";
 import WagmiProviders from "./wagmi-provider";
 import Nav from "./nav";
 import { Logo } from "@/components/ui";
@@ -48,16 +49,18 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         </Script>
         {/* Framer Motion honors the user's OS reduced-motion setting app-wide. */}
         <WagmiProviders>
-          <MotionProvider>
-            <Nav />
-            {children}
-            <footer className={footerStyles.footer}>
-              <Logo href="/" />
-              <p className={footerStyles.text}>
-                Built on Somnia · DreamDEX Event Contracts · Somnia Agents
-              </p>
-            </footer>
-          </MotionProvider>
+          <ThemeProvider>
+            <MotionProvider>
+              <Nav />
+              {children}
+              <footer className={footerStyles.footer}>
+                <Logo href="/" />
+                <p className={footerStyles.text}>
+                  Built on Somnia · DreamDEX Event Contracts · Somnia Agents
+                </p>
+              </footer>
+            </MotionProvider>
+          </ThemeProvider>
         </WagmiProviders>
       </body>
     </html>

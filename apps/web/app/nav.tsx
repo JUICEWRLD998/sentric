@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Logo, Pulse } from "@/components/ui";
 import ConnectButton from "./connect-button";
+import { ThemeToggle } from "./theme-toggle";
 import styles from "./nav.module.css";
 
 const LINKS = [
@@ -39,6 +40,7 @@ export default function Nav() {
           <span className={styles.statusName}>Somnia</span>
           <Pulse tone="success" label="testnet" />
         </span>
+        <ThemeToggle />
         <ConnectButton />
       </div>
     </header>

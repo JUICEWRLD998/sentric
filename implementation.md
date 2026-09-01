@@ -608,6 +608,14 @@ somnia/
 - **Verified:** `tsc --noEmit` 0 errors, eslint 0 problems, `next build` green (7/7 static pages: /, /dashboard, /reason-explorer, /styleguide).
 - **Next (Phase 6):** demo script + recording against the scripted scenario; optional deck; submit on DoraHacks before 2026-09-08 18:00 UTC. Pending item carried from Phase 4: arm the v4 brain (1 STT faucet claim) so the dashboard/reason-explorer stream live autonomous receipts.
 
+### Phase 6 — IN PROGRESS (UI polish + docs; submission prep)
+
+- **Light/dark theme shipped (2026-09-01):** `ThemeProvider` (reads the `data-theme` attribute via `useSyncExternalStore` — no setState-in-effect, satisfies the React 19 eslint rule) + `ThemeToggle` (sun/moon icon swap, Framer Motion, persists `app-theme` in localStorage) wired into the nav. The Noviq light theme was **completed** in `tokens.css` (surfaces, text, borders, accent, glass, shadows, code — Tier-2-only override, never Tier 1/3); `color-scheme` now flips with the theme; scrollbar/selection are semantic-token based. Fonts (Space Grotesk / Geist / Geist Mono) were already wired via `next/font`.
+- **Per-surface polish via 3 parallel subagents** (landing / dashboard / reason-explorer, disjoint file sets): landing hero CTA hover/press states + two-segment Up/Down odds bar + "proven facts" strip (71/71 forge tests · 100% on-chain · ~5 min self-wake); dashboard accent-tinted arm panel + hairline KPI grid + light-mode-safe meters/odds + zebra hedge table + wallet-not-connected hints; reason-explorer decision tally (live counts), confidence progress bars (decision-keyed), `AnimatePresence` raw-receipt expand, focus rings. Framer Motion only; zero new dependencies.
+- **Docs:** README fully rewritten (AI-judge-facing: problem → insight → architecture → safety rails → deployed contracts → explicit map to the 5 judging criteria); `test.md` finished (§7 verification commands, §8 proven-on-testnet receipts); `.env.example` documents the `NEXT_PUBLIC_*` frontend overrides.
+- **Verified:** `forge test` 71/71 · `tsc --noEmit` 0 errors · `eslint` 0 problems · `next build` green (7/7 static pages) · prod-server smoke test: `/`, `/dashboard`, `/reason-explorer`, `/styleguide` all HTTP 200.
+- **Remaining for submission:** arm the v4 brain (needs ~1 STT — deployer holds 31.17 vs 32 required) so the dashboard/reason-explorer stream live autonomous receipts; record the 2–3 min demo (`demo.md` runbook + voiceover); submit on DoraHacks before **2026-09-08 18:00 UTC**.
+
 ### Confirmed (no longer TODO)
 - Testnet: chain id 50312, RPC https://api.infra.testnet.somnia.network, faucet https://testnet.somnia.network.
 - Event Contracts venue addresses, collateral (tUSDC `0x70a86D8842FB63C4Ad2b7cdddF530eBf1BB25d8E`, 6 decimals), Somnia Agents platform (testnet `0x037Bb9C718F3f7fe5eCBDB0b600D607b52706776`).

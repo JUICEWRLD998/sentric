@@ -40,6 +40,12 @@ const RAILS = [
   ['Every decision auditable', 'The Reason Explorer renders each receipt — inputs, decision, confidence, on-chain.'],
 ];
 
+const FACTS = [
+  ['71/71', 'forge tests pass'],
+  ['100%', 'on-chain — no server, API key or oracle'],
+  ['~5 min', 'self-waking cadence'],
+] as const;
+
 export default function Landing() {
   const brain = useBrainState(ADDRESSES.brain);
   const vault = useVaultState();
@@ -49,6 +55,7 @@ export default function Landing() {
 
   const pUp = book?.pUpRaw ? Number(book.pUpRaw) / 1e6 : null;
   const pDown = book?.pDownRaw ? Number(book.pDownRaw) / 1e6 : null;
+  const upWidth = pUp !== null ? `${Math.round(pUp * 1000) / 10}%` : '50%';
 
   return (
     <>
@@ -101,41 +108,46 @@ export default function Landing() {
             <div className={styles.consoleBody}>
               <div className={styles.consoleRow}>
                 <span className={styles.consoleLabel}>agent</span>
-                <div className={styles.consoleAgent}>
-                  <Pulse
-                    tone={brain?.positionOpen ? 'accent' : 'neutral'}
-                    live={Boolean(brain?.isSubscribed)}
-                    label={brain?.positionOpen ? 'Hedging' : 'Standing by'}
-                  />
-                  {brain?.isSubscribed ? (
-                    <Badge tone='success' dot>
-                      subscribed
-                    </Badge>
-                  ) : (
-                    <Badge tone='neutral'>awaiting arm</Badge>
-                  )}
+                <div className={styles.consoleCell}>
+                  <div className={styles.consoleAgent}>
+                    <Pulse
+                      tone={brain?.positionOpen ? 'accent' : 'neutral'}
+                      live={Boolean(brain?.isSubscribed)}
+                      label={brain?.positionOpen ? 'Hedging' : 'Standing by'}
+                    />
+                    {brain?.isSubscribed ? (
+                      <Badge tone='success' dot>
+                        subscribed
+                      </Badge>
+                    ) : (
+                      <Badge tone='neutral'>awaiting arm</Badge>
+                    )}
+                  </div>
+                  <span className={styles.consoleHint}>cycle state · {brain?.stateName ?? '–'}</span>
                 </div>
-                <span className={styles.consoleHint}>cycle state · {brain?.stateName ?? '–'}</span>
               </div>
 
               <div className={styles.consoleRow}>
-                <span className={styles.consoleLabel}>market · up / down</span>
+                <span className={styles.consoleLabel}>market odds</span>
                 {book ? (
-                  <div className={styles.odds}>
-                    <div className={styles.oddsBar} aria-hidden='true'>
-                      <motion.div
-                        className={styles.oddsUp}
-                        animate={{ width: `${pUp !== null ? Math.round(pUp * 1000) / 10 : 50}%` }}
-                        transition={{ duration: 0.6, ease: easings.outExpo }}
-                      />
-                    </div>
-                    <div className={styles.oddsLabels}>
-                      <span className={styles.oddsUpLabel}>
-                        Up {pUp !== null ? formatPctRaw(book.pUpRaw) : '–'}
-                      </span>
-                      <span className={styles.oddsDownLabel}>
-                        Down {pDown !== null ? formatPctRaw(book.pDownRaw) : '–'}
-                      </span>
+                  <div className={styles.consoleCell}>
+                    <div className={styles.odds}>
+                      <div className={styles.oddsBar} aria-hidden='true'>
+                        <motion.div
+                          className={styles.oddsUp}
+                          animate={{ width: upWidth }}
+                          transition={{ duration: 0.6, ease: easings.outExpo }}
+                        />
+                        <div className={styles.oddsDown} />
+                      </div>
+                      <div className={styles.oddsLabels}>
+                        <span className={styles.oddsUpLabel}>
+                          Up {pUp !== null ? formatPctRaw(book.pUpRaw) : '–'}
+                        </span>
+                        <span className={styles.oddsDownLabel}>
+                          Down {pDown !== null ? formatPctRaw(book.pDownRaw) : '–'}
+                        </span>
+                      </div>
                     </div>
                   </div>
                 ) : (
@@ -145,32 +157,36 @@ export default function Landing() {
 
               <div className={styles.consoleRow}>
                 <span className={styles.consoleLabel}>vault</span>
-                <div className={styles.consoleVault}>
-                  <Stat
-                    label='collateral'
-                    value={vault ? formatUsdc(vault.tusdcBalanceRaw) : '–'}
-                    sub='tUSDC'
-                    tone='success'
-                  />
-                  <Stat
-                    label='premium today'
-                    value={vault ? formatUsdc(vault.dailyPremiumSpentRaw) : '–'}
-                    sub='budgeted daily'
-                  />
+                <div className={styles.consoleCell}>
+                  <div className={styles.consoleVault}>
+                    <Stat
+                      label='collateral'
+                      value={vault ? formatUsdc(vault.tusdcBalanceRaw) : '–'}
+                      sub='tUSDC'
+                      tone='success'
+                    />
+                    <Stat
+                      label='premium today'
+                      value={vault ? formatUsdc(vault.dailyPremiumSpentRaw) : '–'}
+                      sub='budgeted daily'
+                    />
+                  </div>
                 </div>
               </div>
 
               <div className={styles.consoleRow}>
                 <span className={styles.consoleLabel}>last decision</span>
                 {latest ? (
-                  <div className={styles.consoleDecision}>
-                    <Badge tone={latest.decision === 'HEDGE' ? 'danger' : 'success'} dot>
-                      {latest.decision}
-                    </Badge>
-                    <span className={styles.consoleConf}>confidence {latest.confidence}/100</span>
-                    <span className={styles.consoleHash}>
-                      {shortHash(latest.inputsHash)} · block {latest.blockNumber.toString()}
-                    </span>
+                  <div className={styles.consoleCell}>
+                    <div className={styles.consoleDecision}>
+                      <Badge tone={latest.decision === 'HEDGE' ? 'danger' : 'success'} dot>
+                        {latest.decision}
+                      </Badge>
+                      <span className={styles.consoleConf}>confidence {latest.confidence}/100</span>
+                      <span className={styles.consoleHash}>
+                        {shortHash(latest.inputsHash)} · block {latest.blockNumber.toString()}
+                      </span>
+                    </div>
                   </div>
                 ) : (
                   <Skeleton lines={2} />
@@ -205,6 +221,14 @@ export default function Landing() {
             title='Real receipts, real payouts'
             description='Sentric already placed live hedges on the Somnia testnet and redeemed winning positions — every one of them verifiable in the Reason Explorer.'
           />
+          <div className={styles.proofFacts}>
+            {FACTS.map(([value, label]) => (
+              <div key={label} className={styles.fact}>
+                <span className={styles.factValue}>{value}</span>
+                <span className={styles.factLabel}>{label}</span>
+              </div>
+            ))}
+          </div>
           <div className={styles.proof}>
             <div className={styles.receipt}>
               <div className={styles.receiptHead}>

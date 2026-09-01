@@ -2,7 +2,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-5);
-  padding: var(--space-5) var(--space-6);
+  padding: var(--space-5) clamp(var(--space-4), 4vw, var(--space-6));
   max-width: 1080px;
   margin-inline: auto;
   width: 100%;
@@ -11,7 +11,7 @@
 /* ---- System status strip (hairline grid of glanceable KPIs) ---- */
 .strip {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
   gap: 1px;
   background: var(--border-subtle);
   border: 1px solid var(--border-subtle);
@@ -22,9 +22,17 @@
 .kpi {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+  min-height: calc(var(--space-6) * 2);
   padding: var(--space-4);
   background: var(--surface-2);
+  transition: background-color var(--dur-2) var(--ease-out-quart);
+}
+
+.kpi:hover {
+  background: var(--surface-3);
 }
 
 .kpiLabel {
@@ -64,14 +72,30 @@
   gap: var(--space-3);
 }
 
-.armRow {
+/* ---- Arm the guardian: focal action panel ---- */
+.armPanel {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: var(--space-4);
+  gap: var(--space-3);
   flex-wrap: wrap;
-  padding-top: var(--space-3);
-  border-top: 1px solid var(--border-subtle);
+  margin-top: var(--space-2);
+  padding: var(--space-4);
+  background: var(--accent-muted);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+}
+
+.armPanel::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: var(--space-3);
+  bottom: var(--space-3);
+  width: 2px;
+  border-radius: var(--radius-full);
+  background: var(--accent);
 }
 
 /* ---- Premium budget meter ---- */
@@ -114,7 +138,7 @@
   height: 100%;
   border-radius: var(--radius-full);
   background: linear-gradient(90deg, var(--violet-600), var(--violet-400));
-  box-shadow: 0 0 12px oklch(0.62 0.19 285 / 0.35);
+  box-shadow: var(--shadow-accent-glow);
 }
 
 /* ---- Odds bar ---- */
@@ -139,11 +163,11 @@
 }
 
 .oddsUpLabel {
-  color: var(--violet-300);
+  color: var(--accent);
 }
 
 .oddsDownLabel {
-  color: var(--amber-400);
+  color: var(--warning);
 }
 
 .oddsBar {
@@ -162,15 +186,15 @@
   bottom: 0;
   left: 50%;
   width: 1px;
-  background: var(--surface-0);
-  opacity: 0.6;
+  background: var(--border-strong);
+  opacity: 0.7;
 }
 
 .oddsUp {
   height: 100%;
   border-radius: var(--radius-full);
   background: linear-gradient(90deg, var(--violet-700), var(--violet-400));
-  box-shadow: 0 0 12px oklch(0.62 0.19 285 / 0.4);
+  box-shadow: var(--shadow-accent-glow);
 }
 
 /* ---- Misc ---- */
@@ -186,6 +210,12 @@
 }
 
 /* ---- Hedge history table ---- */
+.tableWrap {
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
 .table {
   width: 100%;
   border-collapse: collapse;
@@ -213,11 +243,15 @@
 }
 
 .table tbody tr {
-  transition: background-color 0.15s ease;
+  transition: background-color var(--dur-2) var(--ease-out-quart);
+}
+
+.table tbody tr:nth-child(even) {
+  background: var(--surface-1);
 }
 
 .table tbody tr:hover {
-  background: var(--surface-3);
+  background: var(--accent-muted);
 }
 
 .table tbody tr:last-child td {
@@ -253,13 +287,16 @@
   text-align: center;
   color: var(--text-faint);
   font-size: var(--fs-step--1);
-  border: 1px dashed var(--border-subtle);
+  border: 1px dashed var(--border-strong);
   border-radius: var(--radius-md);
+  background: var(--surface-1);
 }
 
 .emptyTitle {
   font-family: var(--font-mono);
+  font-size: var(--fs-step-0);
+  font-weight: var(--weight-semibold);
   text-transform: uppercase;
   letter-spacing: var(--tracking-wide);
-  color: var(--text-muted);
+  color: var(--text-secondary);
 }

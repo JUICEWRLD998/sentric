@@ -1,103 +1,162 @@
-# SENTRIC — How the product works
+# SENTRIC — How to use the app (start to finish)
 
-> A plain-English + technical walkthrough of the full SENTRIC loop — from "the market
-> just dumped" to "your portfolio protected itself" — every step on-chain and auditable.
+> A practical walkthrough for actually using SENTRIC: run it, connect a wallet, fund
+> the vault, arm the guardian, watch it hedge, and read its reasoning. For the deep
+> technical internals, see `implementation.md` and `docs/`.
 
-## 1. The mental model
+## 1. What you're using
 
-SENTRIC is **insurance, not trading**. You deposit collateral into a non-custodial
-vault. The agent is allowed to do exactly one thing with it: buy short-dated Down Event
-Contracts to offset a price drop. It can never move funds out of the vault, and its loss
-per window is capped at the premium it paid.
+SENTRIC is an autonomous portfolio-insurance agent on the Somnia testnet. You deposit
+tUSDC, arm it, and from then on it wakes **itself** every ~5 minutes, reads the BTC
+price, asks an on-chain LLM whether to hedge, and — if the risk is high — buys a Down
+Event Contract to protect your position. Every decision leaves an on-chain receipt you
+can inspect.
 
-An "Event Contract" is a binary outcome: *"will BTC close above its opening price in
-this 15-minute window?"* The Up side costs P(Up), the Down side costs 1 − P(Up). Buying
-Down for a small fixed premium pays a fixed 1.00 if BTC closes lower — which is exactly
-the payout leg of a put option, with zero fees and capped loss.
+There are three screens:
 
-## 2. The components
-
-| Component | Role |
+| Route | Purpose |
 |---|---|
-| **SentricBrain.sol** | The agent's brain. Subscribes to reactivity, runs the decision state machine, calls Somnia Agents, places orders, emits `AuditEvent`s. |
-| **SentricVault.sol** | The wallet. Custodies hedge capital, computes hedge size, places/redeems orders, enforces every safety rail. Owned by the brain. |
-| **Reactivity (0x0100)** | The heartbeat. On `EpochTick` (every 3000 ledger blocks ≈ 5 min) the chain calls the brain directly — self-scheduling with no keeper. |
-| **Somnia Agents** | On-chain AI. `json-fetch` (agentId `13174292974160097713`) pulls the live price; `llm-inference` (`12847293847561029384`) returns the decision + confidence. Both run on a validator subcommittee; outputs are byte-identical (deterministic, temperature 0). |
-| **DreamDEX Event Contracts** | The market. BTC/ETH Up-Down binaries with 15-min & 1-hr windows. Orders go to the per-market BinaryPool. |
+| `/` | Landing page + a live "guardian console" showing current state at a glance |
+| `/dashboard` | The control room — arm/disarm, live status, market odds, hedge history |
+| `/reason-explorer` | The audit trail — every decision the agent ever made |
 
-## 3. One decision cycle, step by step
+## 2. Before you start
 
-```
-EpochTick fires (reactivity, synthetic tx in the same block)
-  → SentricBrain._onEvent
-  → auto-redeem any open position (settle the last window)
-  → state = FETCHING  → call json-fetch  (Bitfinex 5m candle: price + recent move)
-      ↓ (a few blocks later) platform callback → handleResponse
-  → state = DECIDING  → call llm-inference (HEDGE / STAND_DOWN / HOLD + confidence 0–100)
-      ↓ platform callback → handleResponse
-  → if HEDGE:
-       size = hedge size from exposure & P(Down)
-       → vault.placeBinaryOrder(BUY_NO, ...)   (a Down contract, IOC)
-       → emit AuditEvent(inputs, decision, confidence, tx)
-  → on settlement: vault.redeemSettled(...)    (automatic, on the next tick)
+- **Wallet:** MetaMask (injected) pointed at the Somnia Shannon testnet.
+  - Chain ID: **50312** · RPC: `https://api.infra.testnet.somnia.network`
+  - Native token: **STT** (gas + agent fees) — faucet: https://testnet.somnia.network
+  - Collateral: **tUSDC** (6 decimals) — minted via the tUSDC contract `faucet()`
+    (see `docs/venue-live-recipe.md` §2).
+- **Run the app:** `pnpm dev` → http://localhost:3000 (or `pnpm build && pnpm start`).
+
+## 3. Using it, step by step
+
+### 3.1 Start the app
+```bash
+pnpm install
+pnpm dev        # open http://localhost:3000
 ```
 
-Every cycle emits an `AuditEvent` recording the exact inputs the chain saw and the
-decision it made, so the "why" of any trade is reconstructable after the fact. Rendering
-those receipts is the Reason Explorer's whole job.
+### 3.2 Connect your wallet
+Click **"Connect wallet"** (top-right). Approve in MetaMask and switch to the Somnia
+testnet if prompted. Once connected you'll see your STT balance and a short address.
 
-## 4. Hedge sizing (`SentricVault.sizeHedge`)
-
-```
-N = exposure × move / (1 − P(Down))
-```
-
-…capped by `maxPremium / P(Down)` so the worst case is bounded. Degenerate inputs (dead
-book, extreme probability, zero exposure) return 0 — the agent stands down rather than
-guess.
-
-## 5. Safety rails (non-negotiable)
-
-- **Non-custodial** — deposits are yours; the brain can only hedge, never transfer out.
-- **Per-window premium cap** — max premium per epoch (default 10 tUSDC).
-- **Daily budget** — max premium per day (default 500 tUSDC).
-- **Loss-streak stop-loss** — 3 consecutive losing windows halts new hedges.
-- **Pause circuit breaker** — blocks new hedges only; redemption always stays open.
-- **One position at a time** — no stacking, no unbounded exposure.
-- **Failure-tolerant** — try/catch around order placement and redemption; a rejected
-  order or unsettled window never wedges the state machine — the next tick retries.
-
-## 6. Why it's defensible
-
-- **Self-scheduling** → no liveness risk, no keeper.
-- **Deterministic on-chain inference** → tamper-proof, reproducible decisions.
-- **Capped-risk sizing** → can't be liquidated or blown up.
-- **Verifiable reasoning** → every action maps to (deterministic input → deterministic
-  output); the trust moat versus every black-box bot.
-
-## 7. Verification (how to test it)
+### 3.3 Fund the vault (tUSDC)
+The vault holds the hedge capital. Mint test USDC and deposit it:
 
 ```bash
-# contracts — unit + integration tests
-cd contracts && forge test          # 71/71 pass
+# 1. mint tUSDC (faucet, 6-dec)
+cast send 0x70a86D8842FB63C4Ad2b7cdddF530eBf1BB25d8E 'faucet(uint256)' 1000000000 \
+  --private-key "$DEPLOYER_PRIVATE_KEY" --rpc-url "$SOMNIA_RPC_URL" \
+  --gas-limit 10000000 --gas-price 8000000000 --priority-gas-price 1000000000
+# 2. deposit into the vault (approve first)
+#    vault: 0xd4fa5efd13d7cb247c26d267014164031c93885f
+```
 
-# frontend — typecheck, lint, production build
+> Note: `deposit` / `withdraw` are on-chain vault functions. The current UI shows the
+> vault balance but does not yet expose deposit/withdraw buttons — use `cast` (above) or
+> the SDK for now.
+
+### 3.4 Arm the guardian
+On `/dashboard`, flip **"Arm the guardian"**. This subscribes the brain to `EpochTick`,
+so it wakes itself every ~5 minutes with no one watching.
+
+- **Requirement:** the brain must hold ≥ 32 STT (reactivity reserve). If it's
+  unfunded, arming reverts — see §6.
+- Only the **owner** wallet can arm/disarm.
+
+### 3.5 Watch a decision cycle
+The "Agent state" badge steps through **Idle → Fetching → Deciding → Scoring** and back.
+Within ~5 minutes a new row appears in **Hedge history** — `HEDGE` (bought protection),
+`STAND_DOWN` (no threat), or `HOLD` (kept position).
+
+### 3.6 Read the reasoning
+Go to `/reason-explorer`. Each card is one decision:
+
+- **decision** — `HEDGE` / `STAND_DOWN` / `HOLD`
+- **confidence** — how sure the model was (0–100)
+- **block / tx / inputsHash** — the on-chain proof of what it saw
+- **"Show raw receipt"** — expands the full JSON
+
+### 3.7 Tune the thresholds (owner only)
+On `/dashboard` → **Thresholds**, set:
+- **Insured move** (bps) — the minimum adverse move worth insuring (default 200 = 2%)
+- **Down price** (bps) — the probability the agent targets
+
+Click **"Save thresholds"** to write them on-chain (`setHedgeConfig`).
+
+### 3.8 Disarm / withdraw
+- Flip the switch off to **disarm** (unsubscribes reactivity; the reserve is swept back).
+- **Withdraw** principal via `vault.withdraw()` (on-chain; see §3.3 note).
+
+## 4. Reading each screen (cheat sheet)
+
+**Dashboard**
+- Agent state badge = where the cycle is (Idle / Fetching / Deciding / Scoring)
+- `position open` = currently hedged · `subscribed` = armed
+- **Vault** — collateral, premium spent this window/today, "budget used" bar
+- **Live market** — Up/Down probability, best bid/ask, top depth
+- **Hedge history** — every event the brain emitted, newest first
+
+**Reason Explorer**
+- `HEDGE` (red) = bought protection · `STAND_DOWN` (green) = no threat · `HOLD` (neutral)
+- `inputsHash` = fingerprint of the exact inputs it saw (the "what it was thinking")
+
+**Landing / guardian console**
+- Pulse dot = live state (accent = hedging, neutral = standing by)
+- Market bar = current Up/Down odds · last decision = the newest receipt
+
+## 5. What's happening under the hood (30 seconds)
+
+Every ~5 minutes, Somnia **reactivity** fires an `EpochTick` that calls the brain (no
+keeper). The brain:
+1. fetches the BTC 5-minute candle (JSON-API agent),
+2. asks an on-chain **LLM** for `HEDGE / STAND_DOWN / HOLD` + confidence,
+3. on `HEDGE`, buys a **Down Event Contract** sized to the exposure,
+4. redeems any settled winnings automatically.
+
+All of it runs inside validator consensus — no server, no API key, no oracle — and every
+step is written to the chain as an `AuditEvent`. The full spec is in `implementation.md`.
+
+## 6. Troubleshooting
+
+| Symptom | Cause / fix |
+|---|---|
+| Switch won't arm / "awaiting arm" | Brain is unfunded (< 32 STT) or you're not the owner. |
+| No receipts appear | It's unarmed, or < 5 min since arming (EpochTick ≈ 5 min). |
+| Market shows "–" | No live window right now — operators roll windows; op-2 5-min has gaps. |
+| "standing by" | Normal — no position open, the agent is watching. |
+| Arm reverts | Send ≥ 32 STT to the brain first (`node scripts/arm-brain.js <brain>`). |
+
+## 7. Verify it works (run these)
+
+The whole stack is testable from a terminal:
+
+```bash
+# 1. Smart contracts — unit + integration tests (71/71 pass)
+cd contracts && forge test
+
+# 2. Frontend — typecheck, lint, production build
 cd apps/web && pnpm typecheck && pnpm lint && pnpm build
 
-# live on-chain — stream the AuditEvents from the armed brain
+# 3. Live on-chain — stream the brain's AuditEvents as they land
 node scripts/watch-cycle.py
 
-# live market discovery — find a tradeable BTC window
+# 4. Live market discovery — find a tradeable BTC window
 node scripts/wait-live-window.js
 ```
 
-## 8. Proven on testnet (real receipts)
+A clean `forge test` (71/71), `typecheck` (0 errors), `lint` (0 problems) and a
+green `build` is the full acceptance check for the repo.
 
-- The **phase-2 brain** ran the full fetch → LLM → `AuditEvent` cycle autonomously for
-  ~24h of live epochs — those receipts are in the Reason Explorer against the v2 brain.
-- The **phase-4 vault** placed a real Down order and redeemed a settled position:
-  window **#60705**, paid 9.774 tUSDC premium, NO won, redeemed ~18 tUSDC → **+8.23 real
-  profit** (vault 10,008.24 tUSDC).
+## 8. Proven on testnet (real receipts, not mockups)
 
-Both are verifiable on-chain — the Reason Explorer renders them with the `inputsHash`,
-decision, confidence, asset, and block for each one.
+- The **phase-2 brain** (`0x9b0ee5…98ec`) ran the full fetch → LLM → `AuditEvent`
+  cycle autonomously for ~24h of live epochs — those receipts are live in the
+  Reason Explorer under the **"v2 (historical)"** switch.
+- The **phase-4 vault** (`0xd4fa5e…385f`) placed a real Down order and redeemed a
+  settled position: window **#60705**, paid 9.774 tUSDC premium, NO won, redeemed
+  ~18 tUSDC → **+8.23 tUSDC profit** (vault 10,008.24 tUSDC).
+
+Both are verifiable on-chain — the Reason Explorer renders each one with its
+`inputsHash`, decision, confidence, asset, and block.

@@ -26,6 +26,16 @@ html {
   -moz-osx-font-smoothing: grayscale;
 }
 
+html[data-theme="light"] {
+  color-scheme: light;
+}
+
+/* Smooth the theme switch without repainting the world on load. */
+body,
+html {
+  transition: background-color var(--dur-3) var(--ease-out-quart);
+}
+
 html,
 body {
   min-height: 100%;
@@ -80,8 +90,8 @@ svg {
 
 /* Quiet polish layer: selection, scrollbar, touch tap. */
 ::selection {
-  background: oklch(0.62 0.19 285 / 0.35);
-  color: var(--neutral-50);
+  background: oklch(0.62 0.19 285 / 0.32);
+  color: var(--text-primary);
 }
 
 html {
@@ -91,7 +101,7 @@ html {
 
 * {
   scrollbar-width: thin;
-  scrollbar-color: var(--neutral-700) transparent;
+  scrollbar-color: var(--surface-inset) transparent;
 }
 
 ::-webkit-scrollbar {
@@ -99,7 +109,7 @@ html {
   height: 10px;
 }
 ::-webkit-scrollbar-thumb {
-  background: var(--neutral-800);
+  background: var(--surface-inset);
   border-radius: var(--radius-full);
   border: 2px solid var(--surface-0);
 }

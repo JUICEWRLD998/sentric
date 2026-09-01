@@ -1,0 +1,29 @@
+/* Theme toggle — a compact icon button matching the nav chrome.
+   Reads tier-2/3 tokens only (Noviq UI Playbook §2.3/§2.4). */
+
+.toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-full);
+  background: var(--surface-2);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: var(--transition-colors);
+}
+
+.toggle:hover {
+  color: var(--text-primary);
+  border-color: var(--border-strong);
+}
+
+.icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+}
